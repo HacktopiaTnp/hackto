@@ -15,7 +15,7 @@ import {
 } from '@/app/components/ui/select';
 
 interface AuthProps {
-  onLogin: (user: { name: string; email: string; role: 'student' | 'coordinator'; branch?: string; year?: string }) => void;
+  onLogin: (user: { name: string; email: string; role: 'student' | 'coordinator' | 'admin'; branch?: string; year?: string }) => void;
 }
 
 export default function Auth({ onLogin }: AuthProps) {
@@ -29,7 +29,7 @@ export default function Auth({ onLogin }: AuthProps) {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'student' as 'student' | 'coordinator',
+    role: 'student' as 'student' | 'coordinator' | 'admin',
     branch: '',
     year: '',
     phone: '',
@@ -54,13 +54,16 @@ export default function Auth({ onLogin }: AuthProps) {
     e.preventDefault();
     
     if (isLogin) {
-      // Mock login
+      // Mock login with role detection
+      const isAdmin = formData.email === 'admin@tnp.edu';
+      const isCoordinator = formData.email === 'coordinator@tnp.edu';
+      
       onLogin({
-        name: formData.email === 'admin@tnp.edu' ? 'Dr. Rajesh Sharma' : 'Rahul Kumar',
+        name: isAdmin ? 'Dr. Rajesh Kumar' : isCoordinator ? 'Priya Sharma' : 'Rahul Kumar',
         email: formData.email,
-        role: formData.email === 'admin@tnp.edu' ? 'coordinator' : 'student',
-        branch: 'Computer Science',
-        year: '2026',
+        role: isAdmin ? 'admin' : isCoordinator ? 'coordinator' : 'student',
+        branch: isAdmin || isCoordinator ? undefined : 'Computer Science',
+        year: isAdmin || isCoordinator ? undefined : '2026',
       });
     } else {
       // Mock signup
@@ -68,13 +71,13 @@ export default function Auth({ onLogin }: AuthProps) {
         name: formData.name,
         email: formData.email,
         role: formData.role,
-        branch: formData.branch,
-        year: formData.year,
+        branch: formData.role === 'student' ? formData.branch : undefined,
+        year: formData.role === 'student' ? formData.year : undefined,
       });
     }
   };
 
-  const quickLogin = (role: 'student' | 'coordinator') => {
+  const quickLogin = (role: 'student' | 'coordinator' | 'admin') => {
     if (role === 'student') {
       onLogin({
         name: 'Rahul Kumar',
@@ -83,11 +86,17 @@ export default function Auth({ onLogin }: AuthProps) {
         branch: 'Computer Science',
         year: '2026',
       });
+    } else if (role === 'coordinator') {
+      onLogin({
+        name: 'Priya Sharma',
+        email: 'priya.sharma@tnp.edu',
+        role: 'coordinator',
+      });
     } else {
       onLogin({
-        name: 'Dr. Rajesh Sharma',
-        email: 'rajesh.sharma@tnp.edu',
-        role: 'coordinator',
+        name: 'Dr. Rajesh Kumar',
+        email: 'rajesh.kumar@tnp.edu',
+        role: 'admin',
       });
     }
   };
@@ -256,14 +265,14 @@ export default function Auth({ onLogin }: AuthProps) {
               {/* Quick Login Buttons for Demo */}
               <div className="mb-6">
                 <p className="text-sm text-slate-600 mb-3 text-center">Quick Demo Login:</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   <Button
                     variant="outline"
                     onClick={() => quickLogin('student')}
                     className="border-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50"
                   >
                     <User className="size-4 mr-2" />
-                    Student Demo
+                    Student
                   </Button>
                   <Button
                     variant="outline"
@@ -271,7 +280,15 @@ export default function Auth({ onLogin }: AuthProps) {
                     className="border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50"
                   >
                     <Building2 className="size-4 mr-2" />
-                    Coordinator Demo
+                    Coordinator
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => quickLogin('admin')}
+                    className="border-2 border-green-200 hover:border-green-400 hover:bg-green-50"
+                  >
+                    <Building2 className="size-4 mr-2" />
+                    Admin
                   </Button>
                 </div>
               </div>
@@ -325,7 +342,7 @@ export default function Auth({ onLogin }: AuthProps) {
                   <Label htmlFor="role" className="text-slate-700 font-medium">I am a</Label>
                   <Select
                     value={formData.role}
-                    onValueChange={(value: 'student' | 'coordinator') => setFormData({ ...formData, role: value })}
+                    onValueChange={(value: 'student' | 'coordinator' | 'admin') => setFormData({ ...formData, role: value })}
                   >
                     <SelectTrigger className="mt-1.5 h-11 border-slate-300">
                       <SelectValue />
@@ -333,6 +350,7 @@ export default function Auth({ onLogin }: AuthProps) {
                     <SelectContent>
                       <SelectItem value="student">Student</SelectItem>
                       <SelectItem value="coordinator">TnP Coordinator</SelectItem>
+                      <SelectItem value="admin">TnP Administrator</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

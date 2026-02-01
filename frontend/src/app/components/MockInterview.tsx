@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Video, Play, StopCircle, Brain, Star, TrendingUp, MessageSquare, FileText, Award, CheckCircle, AlertCircle, Clock, Mic, Camera, Volume2, Sparkles, Search } from 'lucide-react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -17,7 +17,9 @@ import {
 } from '@/app/components/ui/select';
 
 interface MockInterviewProps {
-  userRole: 'student' | 'coordinator';
+  userRole: 'student' | 'coordinator' | 'admin';
+  searchQuery?: string;
+  setView?: (view: 'dashboard' | 'opportunities' | 'recruiters' | 'interview' | 'analytics') => void;
 }
 
 interface InterviewSession {
@@ -45,12 +47,6 @@ interface InterviewSession {
   }[];
 }
 
-interface MockInterviewProps {
-  userRole: 'student' | 'coordinator';
-  searchQuery?: string;
-  setView?: (view: 'dashboard' | 'opportunities' | 'recruiters' | 'interview' | 'analytics') => void;
-}
-
 export default function MockInterview({ userRole, searchQuery: globalSearchQuery = '', setView }: MockInterviewProps) {
   const [interviewType, setInterviewType] = useState('Technical');
   const [interviewRole, setInterviewRole] = useState('Software Engineer');
@@ -65,9 +61,15 @@ export default function MockInterview({ userRole, searchQuery: globalSearchQuery
   const [microphoneReady, setMicrophoneReady] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const [permissionError, setPermissionError] = useState('');
+  const [isCheckingPermissions, setIsCheckingPermissions] = useState(true);
   
   // Use global search if provided, otherwise use local search
   const activeSearchQuery = globalSearchQuery || searchQuery;
+
+  // Check permissions on component mount
+  useEffect(() => {
+    checkPermissionsOnLoad();
+  }, []);
 
   const interviewQuestions = {
     Technical: [
@@ -204,45 +206,155 @@ export default function MockInterview({ userRole, searchQuery: globalSearchQuery
   ];
 
   const startInterview = () => {
-    setIsInterviewActive(true);
-    setCurrentQuestion(0);
-    setUserAnswer('');
-    setShowSetupDialog(false);
-  };
-
-  const checkPermissions = async () => {
-    setPermissionError('');
-    setCameraReady(false);
-    setMicrophoneReady(false);
-    setAudioReady(false);
-
-    try {
-      // Request camera permission
-      const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      setCameraReady(true);
-      videoStream.getTracks().forEach(track => track.stop()); // Stop the stream after checking
-
-      // Request microphone permission
-      const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      setMicrophoneReady(true);
-      setAudioReady(true);
-      audioStream.getTracks().forEach(track => track.stop()); // Stop the stream after checking
-
-    } catch (error: any) {
-      console.error('Permission error:', error);
-      if (error.name === 'NotAllowedError') {
-        setPermissionError('Camera or microphone access denied. Please allow permissions in your browser settings.');
-      } else if (error.name === 'NotFoundError') {
-        setPermissionError('Camera or microphone not found. Please check your device connections.');
-      } else {
-        setPermissionError('Error accessing camera/microphone. Please check your browser settings.');
-      }
+    // Verify all permissions are granted before starting
+    if (cameraReady && microphoneReady && audioReady) {
+      setIsInterviewActive(true);
+      setCurrentQuestion(0);
+      setUserAnswer('');
+      setShowSetupDialog(false);
+    } else {
+      setPermissionError('Please allow all permissions (Camera, Microphone, and Audio) to start the interview.');
     }
   };
 
-  const handleStartMockInterview = () => {
-    setShowSetupDialog(true);
-    checkPermissions();
+  const checkPermissionsOnLoad = async () => {
+    setIsCheckingPermissions(true);
+    setPermissionError('');
+    
+    try {
+      // Check if media devices are available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setPermissionError('Media devices not supported in this browser.');
+        setIsCheckingPermissions(false);
+        return;
+      }
+
+      // Check camera permission
+      try {
+        const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setCameraReady(true);
+        videoStream.getTracks().forEach(track => track.stop());
+      } catch (error: any) {
+        setCameraReady(false);
+        console.error('Camera check failed:', error.name);
+      }
+
+      // Check microphone permission
+      try {
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        setMicrophoneReady(true);
+        setAudioReady(true);
+        audioStream.getTracks().forEach(track => track.stop());
+      } catch (error: any) {
+        setMicrophoneReady(false);
+        setAudioReady(false);
+        console.error('Microphone check failed:', error.name);
+      }
+
+      // Set error message if any permission failed
+      if (!cameraReady && !microphoneReady) {
+        setPermissionError('Camera or microphone access denied. Please allow permissions in your browser settings.');
+      } else if (!cameraReady) {
+        setPermissionError('Camera access denied. Please allow camera permissions.');
+      } else if (!microphoneReady) {
+        setPermissionError('Microphone access denied. Please allow microphone permissions.');
+      }
+    } catch (error: any) {
+      console.error('Permission check error:', error);
+      setPermissionError('Error checking permissions. Please refresh and try again.');
+    } finally {
+      setIsCheckingPermissions(false);
+    }
+  };
+
+  const checkPermissions = async (): Promise<boolean> => {
+    setPermissionError('');
+    setIsCheckingPermissions(true);
+
+    let cameraGranted = false;
+    let microphoneGranted = false;
+    let audioGranted = false;
+    let errorMessages: string[] = [];
+
+    try {
+      // Check if media devices are available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setPermissionError('Media devices not supported in this browser.');
+        setIsCheckingPermissions(false);
+        setCameraReady(false);
+        setMicrophoneReady(false);
+        setAudioReady(false);
+        return false;
+      }
+
+      // Request camera permission
+      try {
+        const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        cameraGranted = true;
+        setCameraReady(true);
+        videoStream.getTracks().forEach(track => track.stop());
+      } catch (error: any) {
+        console.error('Camera permission error:', error);
+        setCameraReady(false);
+        if (error.name === 'NotAllowedError') {
+          errorMessages.push('Camera access was denied.');
+        } else if (error.name === 'NotFoundError') {
+          errorMessages.push('Camera not found.');
+        } else {
+          errorMessages.push('Camera error occurred.');
+        }
+      }
+
+      // Request microphone permission
+      try {
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        microphoneGranted = true;
+        audioGranted = true;
+        setMicrophoneReady(true);
+        setAudioReady(true);
+        audioStream.getTracks().forEach(track => track.stop());
+      } catch (error: any) {
+        console.error('Microphone permission error:', error);
+        setMicrophoneReady(false);
+        setAudioReady(false);
+        if (error.name === 'NotAllowedError') {
+          errorMessages.push('Microphone access was denied.');
+        } else if (error.name === 'NotFoundError') {
+          errorMessages.push('Microphone not found.');
+        } else {
+          errorMessages.push('Microphone error occurred.');
+        }
+      }
+
+      // Set error message based on results
+      if (errorMessages.length > 0) {
+        setPermissionError(errorMessages.join(' ') + ' Please allow permissions in your browser settings and try again.');
+      }
+
+      setIsCheckingPermissions(false);
+      return cameraGranted && microphoneGranted && audioGranted;
+    } catch (error: any) {
+      console.error('Permission check error:', error);
+      setPermissionError('Error accessing camera/microphone. Please check your browser settings and try again.');
+      setIsCheckingPermissions(false);
+      setCameraReady(false);
+      setMicrophoneReady(false);
+      setAudioReady(false);
+      return false;
+    }
+  };
+
+  const handleStartMockInterview = async () => {
+    // Request all permissions first
+    const permissionsGranted = await checkPermissions();
+    
+    // Only open dialog if all permissions are granted
+    if (permissionsGranted) {
+      setShowSetupDialog(true);
+    } else {
+      // Show dialog anyway to display the error message and permission status
+      setShowSetupDialog(true);
+    }
   };
 
   const stopInterview = () => {
@@ -415,27 +527,76 @@ export default function MockInterview({ userRole, searchQuery: globalSearchQuery
                   <Camera className="size-5 text-purple-600" />
                   Setup Check
                 </h3>
+                
+                {permissionError && (
+                  <div className="mb-4 p-3 bg-red-50 border-2 border-red-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="size-4 text-red-600 mt-0.5 shrink-0" />
+                      <p className="text-xs text-red-700">{permissionError}</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-white border-2 border-slate-200 rounded-xl">
+                  <div className={`flex items-center justify-between p-3 bg-white border-2 rounded-xl transition-colors ${
+                    cameraReady ? 'border-green-200' : permissionError ? 'border-red-200' : 'border-slate-200'
+                  }`}>
                     <div className="flex items-center gap-2">
-                      <Camera className="size-4 text-slate-600" />
+                      <div className={`p-1.5 rounded-lg ${
+                        cameraReady ? 'bg-green-100' : 'bg-slate-100'
+                      }`}>
+                        <Camera className={`size-4 ${
+                          cameraReady ? 'text-green-600' : 'text-slate-400'
+                        }`} />
+                      </div>
                       <span className="text-sm font-medium">Camera</span>
                     </div>
-                    <Badge className="bg-green-600">Ready</Badge>
+                    <Badge className={`${
+                      isCheckingPermissions ? 'bg-slate-300 text-slate-600' :
+                      cameraReady ? 'bg-green-600' : 'bg-red-500'
+                    }`}>
+                      {isCheckingPermissions ? 'Checking...' : cameraReady ? 'Ready' : 'Denied'}
+                    </Badge>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-white border-2 border-slate-200 rounded-xl">
+                  <div className={`flex items-center justify-between p-3 bg-white border-2 rounded-xl transition-colors ${
+                    microphoneReady ? 'border-green-200' : permissionError ? 'border-red-200' : 'border-slate-200'
+                  }`}>
                     <div className="flex items-center gap-2">
-                      <Mic className="size-4 text-slate-600" />
+                      <div className={`p-1.5 rounded-lg ${
+                        microphoneReady ? 'bg-green-100' : 'bg-slate-100'
+                      }`}>
+                        <Mic className={`size-4 ${
+                          microphoneReady ? 'text-green-600' : 'text-slate-400'
+                        }`} />
+                      </div>
                       <span className="text-sm font-medium">Microphone</span>
                     </div>
-                    <Badge className="bg-green-600">Ready</Badge>
+                    <Badge className={`${
+                      isCheckingPermissions ? 'bg-slate-300 text-slate-600' :
+                      microphoneReady ? 'bg-green-600' : 'bg-red-500'
+                    }`}>
+                      {isCheckingPermissions ? 'Checking...' : microphoneReady ? 'Ready' : 'Denied'}
+                    </Badge>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-white border-2 border-slate-200 rounded-xl">
+                  <div className={`flex items-center justify-between p-3 bg-white border-2 rounded-xl transition-colors ${
+                    audioReady ? 'border-green-200' : permissionError ? 'border-red-200' : 'border-slate-200'
+                  }`}>
                     <div className="flex items-center gap-2">
-                      <Volume2 className="size-4 text-slate-600" />
+                      <div className={`p-1.5 rounded-lg ${
+                        audioReady ? 'bg-green-100' : 'bg-slate-100'
+                      }`}>
+                        <Volume2 className={`size-4 ${
+                          audioReady ? 'text-green-600' : 'text-slate-400'
+                        }`} />
+                      </div>
                       <span className="text-sm font-medium">Audio</span>
                     </div>
-                    <Badge className="bg-green-600">Ready</Badge>
+                    <Badge className={`${
+                      isCheckingPermissions ? 'bg-slate-300 text-slate-600' :
+                      audioReady ? 'bg-green-600' : 'bg-red-500'
+                    }`}>
+                      {isCheckingPermissions ? 'Checking...' : audioReady ? 'Ready' : 'Denied'}
+                    </Badge>
                   </div>
                 </div>
               </Card>

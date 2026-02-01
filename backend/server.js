@@ -240,6 +240,114 @@ const jobs = [
   }
 ];
 
+// Sample companies data
+const companies = [
+  {
+    _id: 'comp-1',
+    name: 'Google',
+    industry: 'Technology',
+    location: 'Bangalore, India',
+    website: 'https://careers.google.com',
+    contactPerson: 'Rajesh Kumar',
+    email: 'recruiting@google.com',
+    phone: '+91-80-67218000',
+    description: 'Leading technology company focused on search, cloud computing, and AI.'
+  },
+  {
+    _id: 'comp-2',
+    name: 'Microsoft',
+    industry: 'Technology',
+    location: 'Hyderabad, India',
+    website: 'https://careers.microsoft.com',
+    contactPerson: 'Priya Sharma',
+    email: 'careers@microsoft.com',
+    phone: '+91-40-40115555',
+    description: 'Global leader in software, services, devices and solutions.'
+  },
+  {
+    _id: 'comp-3',
+    name: 'Amazon',
+    industry: 'E-commerce & Cloud',
+    location: 'Mumbai, India',
+    website: 'https://amazon.jobs',
+    contactPerson: 'Amit Patel',
+    email: 'recruiting-india@amazon.com',
+    phone: '+91-22-67251111',
+    description: 'World\'s largest online retailer and cloud computing provider.'
+  },
+  {
+    _id: 'comp-4',
+    name: 'Flipkart',
+    industry: 'E-commerce',
+    location: 'Bangalore, India',
+    website: 'https://www.flipkartcareers.com',
+    contactPerson: 'Sneha Reddy',
+    email: 'careers@flipkart.com',
+    phone: '+91-80-45614561',
+    description: 'India\'s leading e-commerce marketplace.'
+  },
+  {
+    _id: 'comp-5',
+    name: 'Infosys',
+    industry: 'IT Services',
+    location: 'Pune, India',
+    website: 'https://www.infosys.com/careers',
+    contactPerson: 'Vikram Singh',
+    email: 'recruitment@infosys.com',
+    phone: '+91-20-66015000',
+    description: 'Global leader in next-generation digital services and consulting.'
+  },
+  {
+    _id: 'comp-6',
+    name: 'TCS',
+    industry: 'IT Services',
+    location: 'Chennai, India',
+    website: 'https://www.tcs.com/careers',
+    contactPerson: 'Lakshmi Iyer',
+    email: 'campus.recruitment@tcs.com',
+    phone: '+91-44-22541234',
+    description: 'India\'s largest IT services, consulting and business solutions organization.'
+  },
+  {
+    _id: 'comp-7',
+    name: 'Wipro',
+    industry: 'IT Services',
+    location: 'Bangalore, India',
+    website: 'https://careers.wipro.com',
+    contactPerson: 'Arjun Mehta',
+    email: 'campus@wipro.com',
+    phone: '+91-80-28440011',
+    description: 'Leading global information technology, consulting and business process services company.'
+  },
+  {
+    _id: 'comp-8',
+    name: 'Cognizant',
+    industry: 'IT Services',
+    location: 'Hyderabad, India',
+    website: 'https://careers.cognizant.com',
+    contactPerson: 'Meera Nair',
+    email: 'india.recruitment@cognizant.com',
+    phone: '+91-40-67251000',
+    description: 'Professional services company focused on digital, technology and operations.'
+  }
+];
+
+// Sample recruiters data
+const recruiters = [
+  { _id: 'rec-1', companyId: 'comp-1', name: 'Rajesh Kumar', company: 'Google', email: 'rajesh.kumar@google.com', phone: '+91-9876543210', position: 'Senior Technical Recruiter' },
+  { _id: 'rec-2', companyId: 'comp-1', name: 'Anita Desai', company: 'Google', email: 'anita.desai@google.com', phone: '+91-9876543211', position: 'Campus Recruiter' },
+  { _id: 'rec-3', companyId: 'comp-2', name: 'Priya Sharma', company: 'Microsoft', email: 'priya.sharma@microsoft.com', phone: '+91-9876543212', position: 'Talent Acquisition Lead' },
+  { _id: 'rec-4', companyId: 'comp-2', name: 'Karan Kapoor', company: 'Microsoft', email: 'karan.kapoor@microsoft.com', phone: '+91-9876543213', position: 'University Recruiter' },
+  { _id: 'rec-5', companyId: 'comp-3', name: 'Amit Patel', company: 'Amazon', email: 'amit.patel@amazon.com', phone: '+91-9876543214', position: 'Technical Recruiter' },
+  { _id: 'rec-6', companyId: 'comp-3', name: 'Divya Menon', company: 'Amazon', email: 'divya.menon@amazon.com', phone: '+91-9876543215', position: 'Campus Hiring Manager' },
+  { _id: 'rec-7', companyId: 'comp-4', name: 'Sneha Reddy', company: 'Flipkart', email: 'sneha.reddy@flipkart.com', phone: '+91-9876543216', position: 'Recruitment Manager' },
+  { _id: 'rec-8', companyId: 'comp-5', name: 'Vikram Singh', company: 'Infosys', email: 'vikram.singh@infosys.com', phone: '+91-9876543217', position: 'Campus Recruitment Lead' },
+  { _id: 'rec-9', companyId: 'comp-5', name: 'Kavita Joshi', company: 'Infosys', email: 'kavita.joshi@infosys.com', phone: '+91-9876543218', position: 'HR Manager' },
+  { _id: 'rec-10', companyId: 'comp-6', name: 'Lakshmi Iyer', company: 'TCS', email: 'lakshmi.iyer@tcs.com', phone: '+91-9876543219', position: 'Talent Acquisition Specialist' },
+  { _id: 'rec-11', companyId: 'comp-7', name: 'Arjun Mehta', company: 'Wipro', email: 'arjun.mehta@wipro.com', phone: '+91-9876543220', position: 'University Relations Manager' },
+  { _id: 'rec-12', companyId: 'comp-8', name: 'Meera Nair', company: 'Cognizant', email: 'meera.nair@cognizant.com', phone: '+91-9876543221', position: 'Campus Hiring Lead' }
+];
+
 // API Routes
 app.get('/api/jobs/enriched', (req, res) => {
   res.json(jobs);
@@ -254,6 +362,47 @@ app.get('/api/jobs/:id', (req, res) => {
   }
 });
 
+// Companies API
+app.get('/api/companies', (req, res) => {
+  console.log('📋 GET /api/companies - Fetching all companies');
+  console.log('Total companies:', companies.length);
+  res.json({ success: true, companies });
+});
+
+app.get('/api/companies/:id', (req, res) => {
+  console.log('📋 GET /api/companies/:id - Fetching company:', req.params.id);
+  const company = companies.find(c => c._id === req.params.id);
+  if (company) {
+    res.json({ success: true, company });
+  } else {
+    res.status(404).json({ success: false, error: 'Company not found' });
+  }
+});
+
+// Recruiters API
+app.get('/api/recruiters', (req, res) => {
+  const { companyId } = req.query;
+  console.log('👥 GET /api/recruiters - Query:', req.query);
+  
+  if (companyId) {
+    const companyRecruiters = recruiters.filter(r => r.companyId === companyId);
+    console.log(`Found ${companyRecruiters.length} recruiters for company ${companyId}`);
+    res.json({ success: true, recruiters: companyRecruiters });
+  } else {
+    console.log(`Returning all ${recruiters.length} recruiters`);
+    res.json({ success: true, recruiters });
+  }
+});
+
+app.get('/api/recruiters/:id', (req, res) => {
+  const recruiter = recruiters.find(r => r._id === req.params.id);
+  if (recruiter) {
+    res.json({ success: true, recruiter });
+  } else {
+    res.status(404).json({ success: false, error: 'Recruiter not found' });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Backend server is running' });
@@ -263,4 +412,7 @@ app.get('/api/health', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Backend server running on http://localhost:${PORT}`);
   console.log(`📊 Jobs API available at http://localhost:${PORT}/api/jobs/enriched`);
+  console.log(`🏢 Companies API available at http://localhost:${PORT}/api/companies`);
+  console.log(`👥 Recruiters API available at http://localhost:${PORT}/api/recruiters`);
+  console.log(`✅ Health check at http://localhost:${PORT}/api/health`);
 });

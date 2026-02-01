@@ -23,7 +23,7 @@ import {
 } from 'recharts';
 
 interface AnalyticsProps {
-  userRole: 'student' | 'coordinator';
+  userRole: 'student' | 'coordinator' | 'admin';
   searchQuery?: string;
   setView?: (view: 'dashboard' | 'opportunities' | 'recruiters' | 'interview' | 'analytics') => void;
 }

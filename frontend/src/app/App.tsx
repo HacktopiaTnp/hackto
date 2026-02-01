@@ -8,7 +8,7 @@ import MockInterview from '@/app/components/MockInterview';
 import Analytics from '@/app/components/Analytics';
 import Auth from '@/app/components/Auth';
 import Profile from '@/app/components/Profile';
-import { Button } from '@/app/components/ui/button';
+import AdminPanel from '@/app/components/admin/AdminPanel';
 import { Badge } from '@/app/components/ui/badge';
 import { Input } from '@/app/components/ui/input';
 import {
@@ -25,7 +25,7 @@ type View = 'dashboard' | 'opportunities' | 'recruiters' | 'interview' | 'analyt
 interface UserData {
   name: string;
   email: string;
-  role: 'student' | 'coordinator';
+  role: 'student' | 'coordinator' | 'admin';
   branch?: string;
   year?: string;
 }
@@ -106,6 +106,11 @@ export default function App() {
 
   if (!user) {
     return <Auth onLogin={handleLogin} />;
+  }
+
+  // Render AdminPanel for admin users
+  if (user.role === 'admin') {
+    return <AdminPanel user={user} onLogout={handleLogout} />;
   }
 
   return (
@@ -189,7 +194,11 @@ export default function App() {
                 <div className="flex-1 text-left">
                   <p className="text-sm font-bold text-slate-900 truncate">{user.name}</p>
                   <p className="text-xs text-slate-600">
-                    {user.role === 'student' ? `${user.branch} • ${user.year}` : 'Administrator'}
+                    {user.role === 'student' 
+                      ? `${user.branch} • ${user.year}` 
+                      : user.role === 'coordinator' 
+                      ? 'Coordinator' 
+                      : 'TnP Administrator'}
                   </p>
                 </div>
               </button>
@@ -259,7 +268,7 @@ export default function App() {
               {/* User Badge */}
               <div className="hidden sm:block px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl">
                 <p className="text-xs font-semibold text-blue-900">
-                  {user.role === 'student' ? '🎓 Student' : '👔 Coordinator'}
+                  {user.role === 'student' ? '🎓 Student' : user.role === 'coordinator' ? '👔 Coordinator' : '🔑 Admin'}
                 </p>
               </div>
             </div>

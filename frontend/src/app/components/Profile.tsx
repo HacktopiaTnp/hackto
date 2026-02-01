@@ -20,7 +20,7 @@ interface ProfileProps {
   user: {
     name: string;
     email: string;
-    role: 'student' | 'coordinator';
+    role: 'student' | 'coordinator' | 'admin';
     branch?: string;
     year?: string;
   };

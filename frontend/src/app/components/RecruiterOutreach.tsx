@@ -17,7 +17,7 @@ import {
 } from '@/app/components/ui/select';
 
 interface RecruiterOutreachProps {
-  userRole: 'student' | 'coordinator';
+  userRole: 'student' | 'coordinator' | 'admin';
   searchQuery?: string;
   setView?: (view: 'dashboard' | 'opportunities' | 'recruiters' | 'interview' | 'analytics') => void;
 }

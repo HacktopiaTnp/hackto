@@ -8,7 +8,7 @@ import { Input } from '@/app/components/ui/input';
 
 interface DashboardProps {
   setView: (view: 'dashboard' | 'opportunities' | 'recruiters' | 'interview' | 'analytics') => void;
-  userRole: 'student' | 'coordinator';
+  userRole: 'student' | 'coordinator' | 'admin';
   userName: string;
   searchQuery?: string;
 }

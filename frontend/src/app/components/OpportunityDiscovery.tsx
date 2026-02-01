@@ -18,7 +18,9 @@ import { Label } from '@/app/components/ui/label';
 import { Slider } from '@/app/components/ui/slider';
 
 interface OpportunityDiscoveryProps {
-  userRole: 'student' | 'coordinator';
+  userRole: 'student' | 'coordinator' | 'admin';
+  searchQuery?: string;
+  setView?: (view: 'dashboard' | 'opportunities' | 'recruiters' | 'interview' | 'analytics') => void;
 }
 
 interface Job {
@@ -43,12 +45,6 @@ interface Job {
     passoutYear: string;
   };
   benefits: string[];
-}
-
-interface OpportunityDiscoveryProps {
-  userRole: 'student' | 'coordinator';
-  searchQuery?: string;
-  setView?: (view: 'dashboard' | 'opportunities' | 'recruiters' | 'interview' | 'analytics') => void;
 }
 
 export default function OpportunityDiscovery({ userRole, searchQuery: globalSearchQuery = '', setView }: OpportunityDiscoveryProps) {
