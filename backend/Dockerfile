@@ -30,8 +30,8 @@ RUN apk add --no-cache dumb-init curl
 # Copy package files
 COPY package*.json ./
 
-# Install production dependencies only
-RUN npm install --only=production
+# Install ALL dependencies (including dev for tsc-alias, nodemon, etc)
+RUN npm install
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
@@ -50,5 +50,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
 # Expose port
 EXPOSE 3000
 
-# Start application - NODE_ENV already set above
-CMD ["node", "dist/server.js"]
+# Start application
+CMD ["npm", "run", "dev"]
