@@ -29,103 +29,39 @@ export default function StudentReadinessMonitoring() {
   const [students, setStudents] = useState<StudentReadiness[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterReadiness, setFilterReadiness] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  const [loading, setLoading] = useState(true);
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
-    const saved = localStorage.getItem('studentReadiness');
-    if (saved) {
-      setStudents(JSON.parse(saved));
-    } else {
-      const sampleStudents: StudentReadiness[] = [
-        {
-          id: '1',
-          name: 'Rahul Verma',
-          rollNumber: 'CS21001',
-          branch: 'Computer Science',
-          cgpa: 8.5,
-          backlogs: 0,
-          resumeScore: 85,
-          technicalSkills: 90,
-          aptitudeScore: 88,
-          communicationScore: 82,
-          mockInterviewsAttended: 5,
-          averageMockScore: 86,
-          placementReadiness: 'high',
-          areasOfImprovement: ['System Design'],
-          lastAssessment: '2026-01-28',
-          companiesApplied: 12,
-          interviewsScheduled: 3
-        },
-        {
-          id: '2',
-          name: 'Ananya Singh',
-          rollNumber: 'CS21002',
-          branch: 'Computer Science',
-          cgpa: 9.2,
-          backlogs: 0,
-          resumeScore: 92,
-          technicalSkills: 95,
-          aptitudeScore: 94,
-          communicationScore: 90,
-          mockInterviewsAttended: 7,
-          averageMockScore: 93,
-          placementReadiness: 'high',
-          areasOfImprovement: [],
-          lastAssessment: '2026-01-30',
-          companiesApplied: 15,
-          interviewsScheduled: 5
-        },
-        {
-          id: '3',
-          name: 'Vikram Mehta',
-          rollNumber: 'EC21015',
-          branch: 'Electronics',
-          cgpa: 7.2,
-          backlogs: 1,
-          resumeScore: 65,
-          technicalSkills: 70,
-          aptitudeScore: 68,
-          communicationScore: 60,
-          mockInterviewsAttended: 2,
-          averageMockScore: 64,
-          placementReadiness: 'medium',
-          areasOfImprovement: ['Resume Quality', 'Communication', 'Technical Depth'],
-          lastAssessment: '2026-01-25',
-          companiesApplied: 5,
-          interviewsScheduled: 1
-        },
-        {
-          id: '4',
-          name: 'Kavya Reddy',
-          rollNumber: 'IT21023',
-          branch: 'IT',
-          cgpa: 6.8,
-          backlogs: 2,
-          resumeScore: 55,
-          technicalSkills: 58,
-          aptitudeScore: 60,
-          communicationScore: 65,
-          mockInterviewsAttended: 1,
-          averageMockScore: 58,
-          placementReadiness: 'low',
-          areasOfImprovement: ['Clear Backlogs', 'Technical Skills', 'Resume', 'Aptitude'],
-          lastAssessment: '2026-01-20',
-          companiesApplied: 2,
-          interviewsScheduled: 0
-        }
-      ];
-      setStudents(sampleStudents);
-      localStorage.setItem('studentReadiness', JSON.stringify(sampleStudents));
-    }
+    fetchStudents();
   }, []);
 
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (filterReadiness !== 'all') {
+        params.append('readiness', filterReadiness);
+      }
+
+      const response = await fetch(`${apiBaseUrl}/api/v1/student-readiness?${params}`);
+      const data = await response.json();
+
+      if (data.success && Array.isArray(data.data)) {
+        setStudents(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredStudents = students.filter(student => {
-    const matchesSearch = 
+    const matchesSearch =
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.branch.toLowerCase().includes(searchQuery.toLowerCase());
-    
+      student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = filterReadiness === 'all' || student.placementReadiness === filterReadiness;
-    
     return matchesSearch && matchesFilter;
   });
 
@@ -154,76 +90,88 @@ export default function StudentReadinessMonitoring() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+    <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 max-w-7xl mx-auto">
+      {/* Stats Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
+            <CardTitle className="text-[10px] sm:text-xs md:text-sm font-medium text-muted-foreground">Total</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalStudents}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">{stats.totalStudents}</div>
           </CardContent>
         </Card>
         <Card className="border-green-200 bg-green-50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-700">High</CardTitle>
+            <CardTitle className="text-[10px] sm:text-xs md:text-sm font-medium text-green-700">High</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.highReadiness}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold text-green-600">{stats.highReadiness}</div>
           </CardContent>
         </Card>
         <Card className="border-yellow-200 bg-yellow-50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-yellow-700">Medium</CardTitle>
+            <CardTitle className="text-[10px] sm:text-xs md:text-sm font-medium text-yellow-700">Medium</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.mediumReadiness}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold text-yellow-600">{stats.mediumReadiness}</div>
           </CardContent>
         </Card>
         <Card className="border-red-200 bg-red-50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-red-700">Low</CardTitle>
+            <CardTitle className="text-[10px] sm:text-xs md:text-sm font-medium text-red-700">Low</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.lowReadiness}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold text-red-600">{stats.lowReadiness}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Avg Resume</CardTitle>
+            <CardTitle className="text-[10px] sm:text-xs md:text-sm font-medium text-muted-foreground">Avg Resume</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${getScoreColor(stats.averageResumeScore)}`}>
+            <div className={`text-lg sm:text-xl md:text-2xl font-bold ${getScoreColor(stats.averageResumeScore)}`}>
               {stats.averageResumeScore}%
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Avg Tech</CardTitle>
+            <CardTitle className="text-[10px] sm:text-xs md:text-sm font-medium text-muted-foreground">Avg Tech</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${getScoreColor(stats.averageTechnicalScore)}`}>
+            <div className={`text-lg sm:text-xl md:text-2xl font-bold ${getScoreColor(stats.averageTechnicalScore)}`}>
               {stats.averageTechnicalScore}%
             </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Main Card */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="h-5 w-5" />
+        <CardHeader className="p-3 sm:p-4 md:p-6">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base md:text-lg font-semibold">
+            <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5" />
             Student Placement Readiness
           </CardTitle>
-          <div className="flex items-center gap-4 mt-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search students..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 md:gap-4 mt-3 sm:mt-4">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground shrink-0" />
+              <Input 
+                placeholder="Search students..." 
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
+                className="pl-8 sm:pl-9 h-8 sm:h-9 md:h-10 text-xs sm:text-sm"
+              />
             </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <select aria-label="Filter by readiness level" className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={filterReadiness} onChange={(e) => setFilterReadiness(e.target.value as any)}>
+            <div className="flex items-center gap-2 shrink-0">
+              <Filter className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
+              <select 
+                aria-label="Filter by readiness level" 
+                className="flex h-8 sm:h-9 md:h-10 rounded-md border border-input bg-transparent px-2 sm:px-3 py-1 text-[10px] sm:text-xs md:text-sm" 
+                value={filterReadiness} 
+                onChange={(e) => setFilterReadiness(e.target.value as any)}
+              >
                 <option value="all">All Levels</option>
                 <option value="high">High</option>
                 <option value="medium">Medium</option>
@@ -232,95 +180,99 @@ export default function StudentReadinessMonitoring() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+        <CardContent className="p-3 sm:p-4 md:p-6">
+          <div className="space-y-3 sm:space-y-4">
             {filteredStudents.map((student) => (
               <Card key={student.id} className={`border-l-4 ${getReadinessColor(student.placementReadiness)}`}>
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-semibold">{student.name}</h3>
-                          <Badge variant="outline">{student.rollNumber}</Badge>
-                          <Badge variant="secondary">{student.branch}</Badge>
+                <CardContent className="pt-3 sm:pt-4 md:pt-6 p-3 sm:p-4 md:p-6">
+                  <div className="space-y-3 sm:space-y-4">
+                    {/* Header Row */}
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-2">
+                          <h3 className="text-xs sm:text-sm md:text-base font-semibold truncate">{student.name}</h3>
+                          <Badge variant="outline" className="text-[8px] sm:text-xs md:text-sm py-0 px-1.5">{student.rollNumber}</Badge>
+                          <Badge variant="secondary" className="text-[8px] sm:text-xs md:text-sm py-0 px-1.5">{student.branch}</Badge>
                         </div>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4 text-[10px] sm:text-xs md:text-sm text-muted-foreground">
                           <span>CGPA: <span className="font-semibold">{student.cgpa}</span></span>
                           <span>Backlogs: <span className={`font-semibold ${student.backlogs > 0 ? 'text-red-600' : 'text-green-600'}`}>{student.backlogs}</span></span>
                           <span>Last: {new Date(student.lastAssessment).toLocaleDateString()}</span>
                         </div>
                       </div>
-                      <Badge className={getReadinessColor(student.placementReadiness)}>
-                        {student.placementReadiness === 'high' && <CheckCircle className="h-3 w-3 mr-1" />}
-                        {student.placementReadiness !== 'high' && <AlertCircle className="h-3 w-3 mr-1" />}
+                      <Badge className={`${getReadinessColor(student.placementReadiness)} shrink-0 text-[8px] sm:text-xs md:text-sm py-1 px-2`}>
+                        {student.placementReadiness === 'high' && <CheckCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />}
+                        {student.placementReadiness !== 'high' && <AlertCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />}
                         {student.placementReadiness.toUpperCase()}
                       </Badge>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-1">
-                            <FileText className="h-4 w-4" />Resume
+                    {/* Scores Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm">
+                          <span className="flex items-center gap-0.5 sm:gap-1 truncate">
+                            <FileText className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />Resume
                           </span>
-                          <span className={`font-semibold ${getScoreColor(student.resumeScore)}`}>
+                          <span className={`font-semibold ml-1 ${getScoreColor(student.resumeScore)}`}>
                             {student.resumeScore}%
                           </span>
                         </div>
-                        <Progress value={student.resumeScore} className="h-2" />
+                        <Progress value={student.resumeScore} className="h-1.5 sm:h-2" />
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-1">
-                            <Code className="h-4 w-4" />Technical
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm">
+                          <span className="flex items-center gap-0.5 sm:gap-1 truncate">
+                            <Code className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />Technical
                           </span>
-                          <span className={`font-semibold ${getScoreColor(student.technicalSkills)}`}>
+                          <span className={`font-semibold ml-1 ${getScoreColor(student.technicalSkills)}`}>
                             {student.technicalSkills}%
                           </span>
                         </div>
-                        <Progress value={student.technicalSkills} className="h-2" />
+                        <Progress value={student.technicalSkills} className="h-1.5 sm:h-2" />
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-1">
-                            <Award className="h-4 w-4" />Aptitude
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm">
+                          <span className="flex items-center gap-0.5 sm:gap-1 truncate">
+                            <Award className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />Aptitude
                           </span>
-                          <span className={`font-semibold ${getScoreColor(student.aptitudeScore)}`}>
+                          <span className={`font-semibold ml-1 ${getScoreColor(student.aptitudeScore)}`}>
                             {student.aptitudeScore}%
                           </span>
                         </div>
-                        <Progress value={student.aptitudeScore} className="h-2" />
+                        <Progress value={student.aptitudeScore} className="h-1.5 sm:h-2" />
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-1">
-                            <Users className="h-4 w-4" />Communication
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm">
+                          <span className="flex items-center gap-0.5 sm:gap-1 truncate">
+                            <Users className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />Communication
                           </span>
-                          <span className={`font-semibold ${getScoreColor(student.communicationScore)}`}>
+                          <span className={`font-semibold ml-1 ${getScoreColor(student.communicationScore)}`}>
                             {student.communicationScore}%
                           </span>
                         </div>
-                        <Progress value={student.communicationScore} className="h-2" />
+                        <Progress value={student.communicationScore} className="h-1.5 sm:h-2" />
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-6 text-sm">
-                      <div><span className="text-muted-foreground">Mock Interviews:</span> <span className="font-semibold">{student.mockInterviewsAttended}</span></div>
-                      <div><span className="text-muted-foreground">Avg Score:</span> <span className={`font-semibold ${getScoreColor(student.averageMockScore)}`}>{student.averageMockScore}%</span></div>
+                    {/* Stats Row */}
+                    <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-6 text-[10px] sm:text-xs md:text-sm">
+                      <div><span className="text-muted-foreground">Mock:</span> <span className="font-semibold">{student.mockInterviewsAttended}</span></div>
+                      <div><span className="text-muted-foreground">Avg:</span> <span className={`font-semibold ${getScoreColor(student.averageMockScore)}`}>{student.averageMockScore}%</span></div>
                       <div><span className="text-muted-foreground">Applied:</span> <span className="font-semibold">{student.companiesApplied}</span></div>
                       <div><span className="text-muted-foreground">Scheduled:</span> <span className="font-semibold text-blue-600">{student.interviewsScheduled}</span></div>
                     </div>
 
+                    {/* Areas of Improvement */}
                     {student.areasOfImprovement.length > 0 && (
                       <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <AlertCircle className="h-4 w-4 text-orange-600" />
-                          <span className="text-sm font-medium">Areas of Improvement:</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2 mb-2">
+                          <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600 shrink-0" />
+                          <span className="text-[10px] sm:text-xs md:text-sm font-medium">Areas of Improvement:</span>
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2">
                           {student.areasOfImprovement.map((area, idx) => (
-                            <Badge key={idx} variant="outline" className="text-orange-600 border-orange-600">{area}</Badge>
+                            <Badge key={idx} variant="outline" className="text-orange-600 border-orange-600 text-[8px] sm:text-xs md:text-sm py-0.5 px-2">{area}</Badge>
                           ))}
                         </div>
                       </div>
@@ -330,7 +282,7 @@ export default function StudentReadinessMonitoring() {
               </Card>
             ))}
             {filteredStudents.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">No students found.</div>
+              <div className="text-center py-8 sm:py-12 text-[10px] sm:text-xs md:text-sm text-muted-foreground">No students found.</div>
             )}
           </div>
         </CardContent>

@@ -68,13 +68,10 @@ export default function OpportunityDiscovery({ userRole, searchQuery: globalSear
         setLoading(true);
         setError(null);
         
-        // Check if API base URL is configured
-        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-        if (!apiBaseUrl) {
-          throw new Error('API URL not configured. Please check .env file for VITE_API_BASE_URL');
-        }
+        // Use backend on port 3000 (or configured API base URL)
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
         
-        const response = await fetch(`${apiBaseUrl}/api/jobs/enriched`);
+        const response = await fetch(`${apiBaseUrl}/api/v1/jobs/list`);
         
         if (!response.ok) {
           throw new Error(`Backend server error (status: ${response.status}). Make sure server is running on ${apiBaseUrl}`);
@@ -82,8 +79,11 @@ export default function OpportunityDiscovery({ userRole, searchQuery: globalSear
         
         const data = await response.json();
         
+        // Extract array from API response (backend returns { success: true, data: [...] })
+        const jobsArray = Array.isArray(data) ? data : (data.data || []);
+        
         // Transform API data to match our Job interface
-        const transformedJobs: Job[] = data.map((job: any) => ({
+        const transformedJobs: Job[] = jobsArray.map((job: any) => ({
           id: job.id || Math.random(),
           company: job.company || 'Unknown Company',
           website: job.website || job.company_website,

@@ -44,6 +44,10 @@ export default function TnPMemberManagement() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<TnPMember | null>(null);
   const [selectedTab, setSelectedTab] = useState('members');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -55,159 +59,44 @@ export default function TnPMemberManagement() {
   });
 
   useEffect(() => {
-    const saved = localStorage.getItem('tnpMembers');
-    const savedActivities = localStorage.getItem('tnpActivities');
-    
-    if (saved) {
-      setMembers(JSON.parse(saved));
-    } else {
-      const sampleMembers: TnPMember[] = [
-        {
-          id: '1',
-          name: 'Dr. Rajesh Kumar',
-          email: 'rajesh.kumar@college.edu',
-          phone: '+91 98765 43210',
-          role: 'admin',
-          department: 'Computer Science',
-          responsibilities: ['Strategic Planning', 'Company Relations', 'Final Approvals', 'Budget Management'],
-          status: 'active',
-          joinedDate: '2024-01-15',
-          lastActive: '2026-02-01',
-          activitiesCompleted: 145,
-          companiesManaged: 25,
-          studentsHelped: 320,
-          performanceRating: 4.8
-        },
-        {
-          id: '2',
-          name: 'Priya Sharma',
-          email: 'priya.sharma@college.edu',
-          phone: '+91 98765 43211',
-          role: 'coordinator',
-          department: 'Training & Placement',
-          responsibilities: ['Drive Scheduling', 'Student Communication', 'Resume Verification', 'Mock Interviews'],
-          status: 'active',
-          joinedDate: '2024-03-20',
-          lastActive: '2026-02-01',
-          activitiesCompleted: 198,
-          companiesManaged: 15,
-          studentsHelped: 280,
-          performanceRating: 4.9
-        },
-        {
-          id: '3',
-          name: 'Amit Patel',
-          email: 'amit.patel@college.edu',
-          phone: '+91 98765 43212',
-          role: 'coordinator',
-          department: 'Electronics',
-          responsibilities: ['Technical Training', 'Workshop Organization', 'Alumni Relations'],
-          status: 'active',
-          joinedDate: '2024-06-10',
-          lastActive: '2026-01-31',
-          activitiesCompleted: 112,
-          companiesManaged: 10,
-          studentsHelped: 150,
-          performanceRating: 4.6
-        },
-        {
-          id: '4',
-          name: 'Sneha Reddy',
-          email: 'sneha.reddy@college.edu',
-          phone: '+91 98765 43213',
-          role: 'member',
-          department: 'IT',
-          responsibilities: ['Documentation', 'Social Media Updates', 'Event Coordination'],
-          status: 'active',
-          joinedDate: '2024-09-01',
-          lastActive: '2026-01-30',
-          activitiesCompleted: 75,
-          companiesManaged: 5,
-          studentsHelped: 95,
-          performanceRating: 4.4
-        },
-        {
-          id: '5',
-          name: 'Dr. Vikram Singh',
-          email: 'vikram.singh@college.edu',
-          phone: '+91 98765 43214',
-          role: 'member',
-          department: 'Mechanical',
-          responsibilities: ['Industry Connect', 'Project Guidance'],
-          status: 'inactive',
-          joinedDate: '2023-12-05',
-          lastActive: '2025-12-15',
-          activitiesCompleted: 48,
-          companiesManaged: 3,
-          studentsHelped: 60,
-          performanceRating: 4.2
-        }
-      ];
-      setMembers(sampleMembers);
-      localStorage.setItem('tnpMembers', JSON.stringify(sampleMembers));
-    }
-
-    if (savedActivities) {
-      setActivities(JSON.parse(savedActivities));
-    } else {
-      const sampleActivities: Activity[] = [
-        {
-          id: '1',
-          memberId: '2',
-          memberName: 'Priya Sharma',
-          action: 'Scheduled campus drive for TCS',
-          timestamp: '2026-02-01T10:30:00',
-          type: 'drive'
-        },
-        {
-          id: '2',
-          memberId: '1',
-          memberName: 'Dr. Rajesh Kumar',
-          action: 'Approved partnership with Microsoft',
-          timestamp: '2026-02-01T09:15:00',
-          type: 'company'
-        },
-        {
-          id: '3',
-          memberId: '3',
-          memberName: 'Amit Patel',
-          action: 'Conducted technical workshop for 45 students',
-          timestamp: '2026-01-31T15:00:00',
-          type: 'student'
-        },
-        {
-          id: '4',
-          memberId: '2',
-          memberName: 'Priya Sharma',
-          action: 'Verified 28 student resumes',
-          timestamp: '2026-01-31T14:20:00',
-          type: 'student'
-        },
-        {
-          id: '5',
-          memberId: '4',
-          memberName: 'Sneha Reddy',
-          action: 'Updated placement statistics on website',
-          timestamp: '2026-01-31T11:45:00',
-          type: 'system'
-        }
-      ];
-      setActivities(sampleActivities);
-      localStorage.setItem('tnpActivities', JSON.stringify(sampleActivities));
-    }
+    fetchMembers();
+    fetchActivities();
   }, []);
 
-  const saveMembers = (updatedMembers: TnPMember[]) => {
-    setMembers(updatedMembers);
-    localStorage.setItem('tnpMembers', JSON.stringify(updatedMembers));
+  const fetchMembers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`${apiBaseUrl}/api/v1/tnp-members`);
+      const data = await response.json();
+
+      if (data.success && Array.isArray(data.data)) {
+        setMembers(data.data);
+      } else {
+        setError('Failed to fetch members');
+      }
+    } catch (err) {
+      console.error('Error fetching members:', err);
+      setError('Error loading members');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const saveActivities = (updatedActivities: Activity[]) => {
-    setActivities(updatedActivities);
-    localStorage.setItem('tnpActivities', JSON.stringify(updatedActivities));
-  };
+  const fetchActivities = async () => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/v1/tnp-activities`);
+      const data = await response.json();
 
-  const handleAddMember = () => {
+      if (data.success && Array.isArray(data.data)) {
+        setActivities(data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching activities:', err);
+    }
+  };
+    
+  const handleAddMember = async () => {
     const newMember: TnPMember = {
       id: Date.now().toString(),
       name: formData.name,
@@ -241,44 +130,6 @@ export default function TnPMemberManagement() {
     setIsAddDialogOpen(false);
   };
 
-  const handleEditMember = () => {
-    if (!editingMember) return;
-    const updatedMembers = members.map(m => 
-      m.id === editingMember.id 
-        ? {
-            ...m,
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            role: formData.role,
-            department: formData.department,
-            responsibilities: formData.responsibilities.split(',').map(r => r.trim()).filter(r => r),
-            status: formData.status
-          }
-        : m
-    );
-    saveMembers(updatedMembers);
-    resetForm();
-    setEditingMember(null);
-  };
-
-  const handleDeleteMember = (id: string, name: string) => {
-    if (window.confirm('Are you sure you want to remove this member?')) {
-      saveMembers(members.filter(m => m.id !== id));
-      
-      // Log activity
-      const newActivity: Activity = {
-        id: Date.now().toString(),
-        memberId: id,
-        memberName: name,
-        action: `${name} removed from TnP team`,
-        timestamp: new Date().toISOString(),
-        type: 'system'
-      };
-      saveActivities([newActivity, ...activities]);
-    }
-  };
-
   const openEditDialog = (member: TnPMember) => {
     setEditingMember(member);
     setFormData({
@@ -290,6 +141,25 @@ export default function TnPMemberManagement() {
       responsibilities: member.responsibilities.join(', '),
       status: member.status
     });
+    setIsAddDialogOpen(true);
+  };
+
+  const handleDeleteMember = async (id: string) => {
+    if (!confirm('Are you sure you want to remove this member?')) return;
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/v1/tnp-members/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        await fetchMembers();
+      }
+    } catch (err) {
+      console.error('Error deleting member:', err);
+      setError('Error deleting member');
+    }
   };
 
   const resetForm = () => {
@@ -346,7 +216,7 @@ export default function TnPMemberManagement() {
     coordinators: members.filter(m => m.role === 'coordinator').length,
     totalActivities: members.reduce((sum, m) => sum + m.activitiesCompleted, 0),
     totalStudentsHelped: members.reduce((sum, m) => sum + m.studentsHelped, 0),
-    avgRating: members.length > 0 ? (members.reduce((sum, m) => sum + m.performanceRating, 0) / members.length).toFixed(1) : '0'
+    avgRating: members.length > 0 ? (members.reduce((sum, m) => sum + (m.performanceRating || 0), 0) / members.length).toFixed(1) : '0'
   };
 
   return (
@@ -543,7 +413,7 @@ export default function TnPMemberManagement() {
                             )}
                             <div className="flex items-center gap-1">
                               <Award className="h-4 w-4 text-yellow-500" />
-                              <span className="text-sm font-medium">{member.performanceRating.toFixed(1)}</span>
+                              <span className="text-sm font-medium">{(member.performanceRating || 0).toFixed(1)}</span>
                             </div>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
@@ -709,7 +579,7 @@ export default function TnPMemberManagement() {
               <CardContent>
                 <div className="space-y-3">
                   {members
-                    .sort((a, b) => b.performanceRating - a.performanceRating)
+                    .sort((a, b) => (b.performanceRating || 0) - (a.performanceRating || 0))
                     .slice(0, 5)
                     .map((member, index) => (
                       <div key={member.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
@@ -719,7 +589,7 @@ export default function TnPMemberManagement() {
                         </div>
                         <div className="flex items-center gap-1">
                           <Award className="h-4 w-4 text-yellow-500" />
-                          <span className="text-sm font-bold">{member.performanceRating.toFixed(1)}</span>
+                          <span className="text-sm font-bold">{(member.performanceRating || 0).toFixed(1)}</span>
                         </div>
                       </div>
                     ))}

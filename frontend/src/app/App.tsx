@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useClerk } from '@clerk/clerk-react';
 import { Building2, Briefcase, Video, LayoutDashboard, Users, LogOut, Settings, User, Bell, Search, BookOpen, Megaphone, Moon, Sun } from 'lucide-react';
 import Dashboard from '@/app/components/Dashboard';
@@ -14,6 +14,18 @@ import Jobs from '@/app/components/Jobs';
 import CompanyDetail from '@/app/components/CompanyDetail';
 import Blogs from '@/app/components/Blogs';
 import Announcements from '@/app/components/Announcements';
+import LiveCodingPage from '@/app/components/LiveCodingPage';
+import { ProfessionalLiveEditor } from '@/app/components/ProfessionalLiveEditor';
+// New Modules - Critical
+import ResumeAtsAnalysis from '@/app/components/ResumeAtsAnalysis';
+import JobAnnouncementForm from '@/app/components/JobAnnouncementForm';
+import OAPracticeModule from '@/app/components/OAPracticeModule';
+// New Modules - High Priority
+import SkillGapAnalysis from '@/app/components/SkillGapAnalysis';
+import DSATracker from '@/app/components/DSATracker';
+import EligibilityAlerts from '@/app/components/EligibilityAlerts';
+import RoleCreation from '@/app/components/RoleCreation';
+import ProjectInterviewPrep from '@/app/components/ProjectInterviewPrep';
 import { Badge } from '@/app/components/ui/badge';
 import { Input } from '@/app/components/ui/input';
 import {
@@ -25,7 +37,7 @@ import {
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu';
 
-type View = 'dashboard' | 'opportunities' | 'recruiters' | 'interview' | 'analytics' | 'profile' | 'studentProfile' | 'jobs' | 'blogs' | 'announcements' | 'companies';
+type View = 'dashboard' | 'opportunities' | 'recruiters' | 'interview' | 'analytics' | 'profile' | 'studentProfile' | 'jobs' | 'blogs' | 'announcements' | 'companies' | 'resume-ats' | 'jaf' | 'oa-practice' | 'skill-gap' | 'dsa-tracker' | 'alerts' | 'role-creation' | 'project-prep' | 'live-coding';
 
 interface UserData {
   name: string;
@@ -40,14 +52,32 @@ export default function App() {
   const [user, setUser] = useState<UserData | null>(null);
   const [notifications] = useState(7);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    // Initialize from localStorage or default to false
+    const saved = localStorage.getItem('darkMode');
+    return saved === 'true';
+  });
   const { signOut } = useClerk();
+
+  // Apply dark mode class to document root and persist to localStorage
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('darkMode', darkMode.toString());
+  }, [darkMode]);
 
   const navigation = [
     { id: 'dashboard' as View, name: 'Dashboard', icon: LayoutDashboard },
     { id: 'jobs' as View, name: 'Jobs', icon: Briefcase },
     { id: 'companies' as View, name: 'Companies', icon: Building2 },
     { id: 'interview' as View, name: 'Mock Interview', icon: Video },
+    { id: 'live-coding' as View, name: 'Live Coding', icon: Video },
+    { id: 'resume-ats' as View, name: 'Resume ATS', icon: BookOpen },
+    { id: 'dsa-tracker' as View, name: 'DSA Tracker', icon: Briefcase },
+    { id: 'oa-practice' as View, name: 'OA Practice', icon: Video },
     { id: 'blogs' as View, name: 'Blogs', icon: BookOpen },
     { id: 'announcements' as View, name: 'Announcements', icon: Megaphone },
     { id: 'analytics' as View, name: 'Analytics', icon: Users },
@@ -107,6 +137,8 @@ export default function App() {
         return <RecruiterOutreach userRole={user.role} searchQuery={globalSearchQuery} setView={handleViewChange} />;
       case 'interview':
         return <MockInterview userRole={user.role} searchQuery={globalSearchQuery} setView={handleViewChange} />;
+      case 'live-coding':
+        return <ProfessionalLiveEditor />;
       case 'blogs':
         return <Blogs />;
       case 'announcements':
@@ -117,6 +149,24 @@ export default function App() {
         return <Profile user={user} onUpdate={setUser} />;
       case 'studentProfile':
         return <StudentProfile />;
+      // New Student Modules
+      case 'resume-ats':
+        return <ResumeAtsAnalysis userRole={user.role} />;
+      case 'dsa-tracker':
+        return <DSATracker />;
+      case 'oa-practice':
+        return <OAPracticeModule />;
+      case 'skill-gap':
+        return <SkillGapAnalysis userRole={user.role} />;
+      case 'alerts':
+        return <EligibilityAlerts />;
+      case 'project-prep':
+        return <ProjectInterviewPrep />;
+      // New Recruiter Modules
+      case 'jaf':
+        return <JobAnnouncementForm userRole={user.role as any} />;
+      case 'role-creation':
+        return <RoleCreation />;
       default:
         return <Dashboard setView={handleViewChange} userRole={user.role} userName={user.name} />;
     }
@@ -132,11 +182,11 @@ export default function App() {
   }
 
   return (
-    <div className="size-full flex flex-col md:flex-row bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/30">
+    <div className="size-full flex flex-col md:flex-row bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       {/* Sidebar Navigation */}
-      <aside className="w-full md:w-72 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col shadow-lg">
+      <aside className="w-full md:w-72 bg-white dark:bg-slate-900 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700 flex flex-col shadow-lg">
         {/* Logo Section */}
-        <div className="p-4 md:p-6 border-b border-slate-200">
+        <div className="p-4 md:p-6 border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-3">
             <div className="size-10 md:size-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
               <Building2 className="size-5 md:size-7 text-white" />
@@ -145,7 +195,7 @@ export default function App() {
               <h1 className="font-bold text-lg md:text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 TnP AI Platform
               </h1>
-              <p className="text-xs text-slate-600">Smart Placement System</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Smart Placement System</p>
             </div>
           </div>
         </div>
@@ -163,7 +213,7 @@ export default function App() {
                   className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3.5 rounded-xl transition-all whitespace-nowrap ${
                     isActive
                       ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30'
-                      : 'text-slate-700 hover:bg-slate-100'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
                   <Icon className="size-4 md:size-5" />
@@ -174,8 +224,8 @@ export default function App() {
           </div>
 
           {/* Quick Stats in Sidebar */}
-          <div className="hidden md:block pt-6 mt-6 border-t border-slate-200">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 mb-3">
+          <div className="hidden md:block pt-6 mt-6 border-t border-slate-200 dark:border-slate-700">
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider px-4 mb-3">
               Quick Stats
             </p>
             <div className="space-y-2">
@@ -202,16 +252,16 @@ export default function App() {
         </nav>
 
         {/* User Profile Section */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="w-full flex items-center gap-3 p-3 hover:bg-white rounded-xl transition-colors">
+              <button className="w-full flex items-center gap-3 p-3 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-colors">
                 <div className="size-11 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">
                   {user.name.charAt(0)}
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="text-sm font-bold text-slate-900 truncate">{user.name}</p>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{user.name}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
                     {user.role === 'student' 
                       ? `${user.branch} • ${user.year}` 
                       : user.role === 'coordinator' 
@@ -249,7 +299,7 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden min-h-0">
         {/* Top Header Bar */}
-        <header className="bg-white border-b-2 border-slate-200 shadow-sm">
+        <header className="bg-white dark:bg-slate-900 border-b-2 border-slate-200 dark:border-slate-700 shadow-sm">
           <div className="px-3 md:px-6 lg:px-8 py-2.5 md:py-3 lg:py-4 flex items-center justify-between gap-2 md:gap-4">
             <div className="flex-1 max-w-xl">
               <div className="relative">
@@ -260,7 +310,7 @@ export default function App() {
                   placeholder={getSearchPlaceholder()}
                   value={globalSearchQuery}
                   onChange={(e) => setGlobalSearchQuery(e.target.value)}
-                  className="pl-8 md:pl-9 lg:pl-10 pr-10 h-9 md:h-10 lg:h-11 border-2 border-slate-300 bg-slate-50 focus:bg-white focus:border-blue-500 text-sm md:text-base transition-all"
+                  className="pl-8 md:pl-9 lg:pl-10 pr-10 h-9 md:h-10 lg:h-11 border-2 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-700 focus:border-blue-500 text-sm md:text-base dark:text-slate-100 dark:placeholder:text-slate-400 transition-all"
                 />
                 {globalSearchQuery && (
                   <button
@@ -280,7 +330,8 @@ export default function App() {
               {/* Dark Mode Toggle */}
               <button
                 onClick={() => setDarkMode(!darkMode)}
-                className="p-2 md:p-2.5 hover:bg-slate-100 rounded-xl transition-colors"
+                className="p-2 md:p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                aria-label="Toggle dark mode"
               >
                 {darkMode ? (
                   <Sun className="size-5 md:size-6 text-yellow-500" />
@@ -290,8 +341,8 @@ export default function App() {
               </button>
 
               {/* Notifications */}
-              <button className="relative p-2 md:p-2.5 hover:bg-slate-100 rounded-xl transition-colors">
-                <Bell className="size-5 md:size-6 text-slate-600" />
+              <button className="relative p-2 md:p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+                <Bell className="size-5 md:size-6 text-slate-600 dark:text-slate-300" />
                 {notifications > 0 && (
                   <span className="absolute top-0.5 right-0.5 size-4 md:size-5 bg-red-500 text-white text-[10px] md:text-xs font-bold rounded-full flex items-center justify-center">
                     {notifications}

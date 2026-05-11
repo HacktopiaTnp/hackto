@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { Briefcase, Building2, Video, TrendingUp, Calendar, CheckCircle, AlertCircle, Star, Clock, ArrowRight, Zap, Search } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Briefcase, Building2, Video, TrendingUp, Calendar, CheckCircle, AlertCircle, Star, Clock, ArrowRight, Zap, Search, Loader } from 'lucide-react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Progress } from '@/app/components/ui/progress';
 import { Input } from '@/app/components/ui/input';
+import { detectBackendPort } from '@/utils/portDetection';
 
 interface DashboardProps {
   setView: (view: 'dashboard' | 'opportunities' | 'recruiters' | 'interview' | 'analytics') => void;
@@ -13,18 +14,72 @@ interface DashboardProps {
   searchQuery?: string;
 }
 
+interface DashboardStats {
+  totalInterviews: number;
+  averageScore: number;
+  completedApplications: number;
+  upcomingInterviews: number;
+  companiesFollowing: number;
+  resumeScores: number;
+  dsaProblemsSolved: number;
+  oaAttempts: number;
+}
+
 export default function Dashboard({ setView, userRole, userName, searchQuery: globalSearchQuery = '' }: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [dashboardOverview, setDashboardOverview] = useState<any>(null);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Use global search if provided, otherwise use local search
   const activeSearchQuery = globalSearchQuery || searchQuery;
   
-  const studentStats = [
-    { label: 'New Opportunities', value: '24', icon: Briefcase, color: 'from-blue-500 to-blue-600', change: '+12%', bgColor: 'bg-blue-50', textColor: 'text-blue-600' },
-    { label: 'Matched Jobs', value: '18', icon: CheckCircle, color: 'from-green-500 to-green-600', change: '+8%', bgColor: 'bg-green-50', textColor: 'text-green-600' },
-    { label: 'Applications Sent', value: '12', icon: TrendingUp, color: 'from-purple-500 to-purple-600', change: '+5%', bgColor: 'bg-purple-50', textColor: 'text-purple-600' },
-    { label: 'Mock Interviews', value: '6', icon: Video, color: 'from-orange-500 to-orange-600', change: '+2', bgColor: 'bg-orange-50', textColor: 'text-orange-600' },
-  ];
+  // Fetch dashboard data from backend
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const backendUrl = await detectBackendPort();
+        
+        // Fetch all dashboard endpoints in parallel
+        const [statsRes, overviewRes, activityRes] = await Promise.all([
+          fetch(`${backendUrl}/api/v1/dashboard/stats`),
+          fetch(`${backendUrl}/api/v1/dashboard/overview`),
+          fetch(`${backendUrl}/api/v1/dashboard/recent-activity`)
+        ]);
+        
+        if (!statsRes.ok || !overviewRes.ok || !activityRes.ok) {
+          throw new Error('Failed to fetch dashboard data');
+        }
+        
+        const statsData = await statsRes.json();
+        const overviewData = await overviewRes.json();
+        const activityData = await activityRes.json();
+        
+        setDashboardStats(statsData.data);
+        setDashboardOverview(overviewData.data);
+        setRecentActivity(activityData.data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError('Failed to load dashboard data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchDashboardData();
+  }, []);
+  
+  // Map stats to display format
+  const studentStats = dashboardStats ? [
+    { label: 'Total Interviews', value: dashboardStats.totalInterviews.toString(), icon: Video, color: 'from-blue-500 to-blue-600', change: `${dashboardStats.averageScore}%`, bgColor: 'bg-blue-50', textColor: 'text-blue-600' },
+    { label: 'Average Score', value: `${dashboardStats.averageScore}%`, icon: Star, color: 'from-green-500 to-green-600', change: '+8%', bgColor: 'bg-green-50', textColor: 'text-green-600' },
+    { label: 'Completed Applications', value: dashboardStats.completedApplications.toString(), icon: CheckCircle, color: 'from-purple-500 to-purple-600', change: '+5%', bgColor: 'bg-purple-50', textColor: 'text-purple-600' },
+    { label: 'Companies Following', value: dashboardStats.companiesFollowing.toString(), icon: Building2, color: 'from-orange-500 to-orange-600', change: '+2', bgColor: 'bg-orange-50', textColor: 'text-orange-600' },
+  ] : [];
 
   const coordinatorStats = [
     { label: 'Total Students', value: '450', icon: Briefcase, color: 'from-blue-500 to-blue-600', change: '+15', bgColor: 'bg-blue-50', textColor: 'text-blue-600' },
@@ -68,17 +123,12 @@ export default function Dashboard({ setView, userRole, userName, searchQuery: gl
     },
   ];
 
-  const upcomingInterviews = [
-    { company: 'Wipro', date: '2026-02-05', time: '10:00 AM', type: 'Technical Round' },
-    { company: 'Infosys', date: '2026-02-08', time: '2:00 PM', type: 'HR Round' },
-  ];
-
-  const recentActivity = [
-    { action: 'Applied to Software Engineer role at TCS', time: '2 hours ago', type: 'application' },
-    { action: 'Completed mock interview for Technical role', time: '5 hours ago', type: 'interview' },
-    { action: 'New matching opportunity from Cognizant', time: '1 day ago', type: 'match' },
-    { action: 'Resume viewed by HCL Technologies', time: '2 days ago', type: 'view' },
-  ];
+  const upcomingInterviews = dashboardOverview?.achievements?.map((achievement: any, idx: number) => ({
+    company: achievement.title || 'Company',
+    date: new Date().toISOString().split('T')[0],
+    time: `${10 + idx}:00 AM`,
+    type: 'Technical Round'
+  })) || [];
 
   // Filter opportunities based on search
   const filteredOpportunities = recentOpportunities.filter(opp =>
@@ -86,6 +136,33 @@ export default function Dashboard({ setView, userRole, userName, searchQuery: gl
     opp.role.toLowerCase().includes(activeSearchQuery.toLowerCase()) ||
     opp.location.toLowerCase().includes(activeSearchQuery.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader className="size-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-slate-600">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <Card className="p-6 border-2 border-red-200 bg-red-50">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="size-6 text-red-600" />
+            <div>
+              <h3 className="font-bold text-red-900">Error</h3>
+              <p className="text-red-700">{error}</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">

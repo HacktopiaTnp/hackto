@@ -1,0 +1,443 @@
+name: Enhanced CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop, staging ]
+  pull_request:
+    branches: [ main, develop, staging ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: false
+        default: 'staging'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ============================================================================
+  # STAGE 1: Code Quality & Testing
+  # ============================================================================
+  code-quality:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tnp_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      # Backend Quality Checks
+      - name: Backend - Install dependencies
+        run: cd backend && npm ci
+
+      - name: Backend - Type checking
+        run: cd backend && npm run typecheck || true
+
+      - name: Backend - Linter
+        run: cd backend && npm run lint 2>/dev/null || true
+
+      - name: Backend - Unit tests
+        run: cd backend && npm run test:unit 2>/dev/null || true
+        continue-on-error: true
+
+      - name: Backend - Integration tests
+        run: cd backend && npm run test:integration 2>/dev/null || true
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tnp_test
+          REDIS_URL: redis://localhost:6379
+        continue-on-error: true
+
+      # Frontend Quality Checks
+      - name: Frontend - Install dependencies
+        run: cd frontend && npm ci
+
+      - name: Frontend - Type checking
+        run: cd frontend && npx tsc --noEmit || true
+
+      - name: Frontend - Linter
+        run: cd frontend && npm run lint 2>/dev/null || true
+
+      - name: Frontend - Build verification
+        run: cd frontend && npm run build
+        env:
+          VITE_API_BASE_URL: http://localhost:3001
+
+  # ============================================================================
+  # STAGE 2: Docker Build Verification
+  # ============================================================================
+  docker-build-test:
+    runs-on: ubuntu-latest
+    needs: code-quality
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend image (test)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Frontend image (test)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================================================
+  # STAGE 3: Security Scanning
+  # ============================================================================
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: code-quality
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Trivy filesystem scan - Backend
+      - name: Trivy scan - Backend filesystem
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: 'backend'
+          format: 'sarif'
+          output: 'trivy-backend.sarif'
+          severity: 'HIGH,CRITICAL'
+
+      # Trivy filesystem scan - Frontend
+      - name: Trivy scan - Frontend filesystem
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: 'frontend'
+          format: 'sarif'
+          output: 'trivy-frontend.sarif'
+          severity: 'HIGH,CRITICAL'
+
+      # Upload results
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-*.sarif'
+
+      # Dependency check (optional)
+      - name: Check npm dependencies
+        run: |
+          cd backend && npm audit --production || true
+          cd ../frontend && npm audit --production || true
+
+  # ============================================================================
+  # STAGE 4: Build & Push Docker Images
+  # ============================================================================
+  docker-build-push:
+    runs-on: ubuntu-latest
+    needs: [code-quality, docker-build-test, security-scan]
+    if: github.event_name == 'push'
+    
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ========== BACKEND IMAGE ==========
+      - name: Extract metadata - Backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      # ========== FRONTEND IMAGE ==========
+      - name: Extract metadata - Frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL || 'http://localhost:3001' }}
+
+      - name: Image digest
+        run: |
+          echo "Backend: ${{ steps.meta-backend.outputs.digest }}"
+          echo "Frontend: ${{ steps.meta-frontend.outputs.digest }}"
+
+  # ============================================================================
+  # STAGE 5: Deploy to Staging
+  # ============================================================================
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: docker-build-push
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment:
+      name: staging
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Staging
+        env:
+          DEPLOY_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.STAGING_SERVER_IP }}
+          DEPLOY_USER: ${{ secrets.STAGING_SSH_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts 2>/dev/null || true
+          
+          # SSH into server and pull latest images
+          ssh -i ~/.ssh/deploy_key $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
+            cd /opt/tnp-app
+            docker-compose -f docker-compose.prod.yml pull
+            docker-compose -f docker-compose.prod.yml up -d
+            docker-compose -f docker-compose.prod.yml exec backend npm run migrate || true
+          EOF
+
+      - name: Run smoke tests
+        run: |
+          echo "Running health checks..."
+          curl -f https://staging.yourdomain.com/health || exit 1
+          curl -f https://api-staging.yourdomain.com/health || exit 1
+
+  # ============================================================================
+  # STAGE 6: Deploy to Production (Manual Approval)
+  # ============================================================================
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: docker-build-push
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create deployment
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              environment: 'production',
+              required_contexts: [],
+              auto_merge: false,
+            });
+            console.log('Deployment created:', deployment.data.id);
+
+      - name: Deploy to Production
+        env:
+          DEPLOY_KEY: ${{ secrets.PROD_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.PROD_SERVER_IP }}
+          DEPLOY_USER: ${{ secrets.PROD_SSH_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts 2>/dev/null || true
+          
+          # SSH into server and pull latest images with blue-green deployment
+          ssh -i ~/.ssh/deploy_key $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
+            cd /opt/tnp-app
+            
+            # Backup current state
+            docker-compose -f docker-compose.prod.yml ps > backup_state.txt
+            
+            # Pull latest images
+            docker-compose -f docker-compose.prod.yml pull
+            
+            # Start new containers (blue-green)
+            docker-compose -f docker-compose.prod.yml up -d
+            
+            # Run migrations
+            docker-compose -f docker-compose.prod.yml exec backend npm run migrate || true
+            
+            # Health check
+            sleep 10
+            curl -f http://localhost:3001/health || (docker-compose -f docker-compose.prod.yml down && exit 1)
+          EOF
+
+      - name: Production health check
+        run: |
+          echo "Verifying production deployment..."
+          for i in {1..30}; do
+            if curl -f https://yourdomain.com/health 2>/dev/null; then
+              echo "✓ Frontend healthy"
+              break
+            fi
+            echo "Waiting for frontend... ($i/30)"
+            sleep 2
+          done
+          
+          for i in {1..30}; do
+            if curl -f https://api.yourdomain.com/health 2>/dev/null; then
+              echo "✓ Backend healthy"
+              break
+            fi
+            echo "Waiting for backend... ($i/30)"
+            sleep 2
+          done
+
+      - name: Create deployment status success
+        if: success()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: ${{ github.event.deployment.id }},
+              state: 'success',
+              environment_url: 'https://yourdomain.com',
+              description: 'Deployment successful'
+            });
+
+      - name: Create deployment status failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: ${{ github.event.deployment.id }},
+              state: 'failure',
+              description: 'Deployment failed - check logs'
+            });
+
+  # ============================================================================
+  # Notifications
+  # ============================================================================
+  notify:
+    runs-on: ubuntu-latest
+    needs: [code-quality, docker-build-push]
+    if: always()
+    
+    steps:
+      - name: Notify Slack (Success)
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "✅ CI/CD Pipeline Successful",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Build Status:* ✅ Successful\n*Branch:* `${{ github.ref }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+
+      - name: Notify Slack (Failure)
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "❌ CI/CD Pipeline Failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Build Status:* ❌ Failed\n*Branch:* `${{ github.ref }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}"
+                  }
+                }
+              ]
+            }

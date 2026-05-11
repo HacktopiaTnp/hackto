@@ -61,6 +61,10 @@ export default function RecruiterNotes({ searchQuery = '' }: RecruiterNotesProps
   const [localSearch, setLocalSearch] = useState('');
   const [showDialog, setShowDialog] = useState(false);
   const [editingNote, setEditingNote] = useState<RecruiterNote | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
   const [formData, setFormData] = useState<Partial<RecruiterNote>>({
     recruiterName: '',
     companyType: 'product',
@@ -85,45 +89,77 @@ export default function RecruiterNotes({ searchQuery = '' }: RecruiterNotesProps
   const activeSearch = searchQuery || localSearch;
 
   useEffect(() => {
-    const savedNotes = localStorage.getItem('recruiterNotes');
-    if (savedNotes) {
-      setNotes(JSON.parse(savedNotes));
-    }
+    fetchNotes();
   }, []);
 
-  const saveNote = () => {
-    if (!validateForm()) return;
+  const fetchNotes = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`${apiBaseUrl}/api/v1/recruiter-notes`);
+      const data = await response.json();
 
-    if (editingNote) {
-      // Update existing note
-      const updatedNotes = notes.map(note =>
-        note.id === editingNote.id
-          ? { ...formData as RecruiterNote, id: editingNote.id, createdAt: editingNote.createdAt, updatedAt: new Date().toISOString() }
-          : note
-      );
-      setNotes(updatedNotes);
-      localStorage.setItem('recruiterNotes', JSON.stringify(updatedNotes));
-    } else {
-      // Create new note
-      const newNote: RecruiterNote = {
-        ...(formData as RecruiterNote),
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      const updatedNotes = [...notes, newNote];
-      setNotes(updatedNotes);
-      localStorage.setItem('recruiterNotes', JSON.stringify(updatedNotes));
+      if (data.success && Array.isArray(data.data)) {
+        setNotes(data.data);
+      } else {
+        setError('Failed to fetch recruiter notes');
+      }
+    } catch (err) {
+      console.error('Error fetching recruiter notes:', err);
+      setError('Error loading recruiter notes');
+    } finally {
+      setLoading(false);
     }
-
-    closeDialog();
   };
 
-  const deleteNote = (id: string) => {
-    if (confirm('Are you sure you want to delete this recruiter note?')) {
-      const updatedNotes = notes.filter(note => note.id !== id);
-      setNotes(updatedNotes);
-      localStorage.setItem('recruiterNotes', JSON.stringify(updatedNotes));
+  const saveNote = async () => {
+    if (!validateForm()) return;
+
+    try {
+      setSubmitLoading(true);
+      const url = editingNote 
+        ? `${apiBaseUrl}/api/v1/recruiter-notes/${editingNote.id}`
+        : `${apiBaseUrl}/api/v1/recruiter-notes`;
+      
+      const method = editingNote ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      if (response.ok) {
+        await fetchNotes();
+        closeDialog();
+      } else {
+        setError('Failed to save recruiter note');
+      }
+    } catch (err) {
+      console.error('Error saving recruiter note:', err);
+      setError('Error saving recruiter note');
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const deleteNote = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this recruiter note?')) return;
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/v1/recruiter-notes/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        await fetchNotes();
+      } else {
+        setError('Failed to delete recruiter note');
+      }
+    } catch (err) {
+      console.error('Error deleting recruiter note:', err);
+      setError('Error deleting recruiter note');
     }
   };
 
@@ -228,6 +264,24 @@ export default function RecruiterNotes({ searchQuery = '' }: RecruiterNotesProps
           <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900">Recruiter Notes</h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">Track and manage recruiter communications</p>
         </div>
+      </div>
+
+      {/* Loading State */}
+      {loading && (
+        <Card className="text-center p-6 sm:p-8 mb-4 sm:mb-6">
+          <div className="animate-pulse text-gray-600">Loading recruiter notes...</div>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <Card className="text-center p-4 sm:p-6 mb-4 sm:mb-6 border-red-200 bg-red-50">
+          <div className="text-sm text-red-600">{error}</div>
+        </Card>
+      )}
+
+      {!loading && !error && (
+        <>
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg w-full sm:w-auto">
@@ -708,7 +762,6 @@ export default function RecruiterNotes({ searchQuery = '' }: RecruiterNotesProps
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
 
       {/* Search */}
       {!searchQuery && (
@@ -812,6 +865,8 @@ export default function RecruiterNotes({ searchQuery = '' }: RecruiterNotesProps
             </Card>
           ))}
         </div>
+      )}
+        </>
       )}
     </div>
   );

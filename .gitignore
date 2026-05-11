@@ -1,0 +1,93 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+.next/
+out/
+.nuxt/
+coverage/
+
+# Environment files (secrets)
+.env
+.env.local
+.env.production.local
+.env.development.local
+.env.test.local
+
+# Keep these templates
+!.env.example
+!.env.docker
+
+# OS files
+.DS_Store
+Thumbs.db
+.gitkeep
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.sublime-project
+.sublime-workspace
+
+# Docker
+docker_data/
+postgres_data/
+redis_data/
+nginx_cache/
+
+# Certificates (except generated ones in repo)
+certs/*.key
+certs/*.csr
+certs/*.crt
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+.tmp/
+.cache/
+*.tmp
+
+# Credentials and sensitive data
+.env.production
+.env.*.local
+secrets.json
+credentials.json
+
+# Node modules cache
+.npm/
+.node-gyp/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Backup files
+*.bak
+*.backup
+*.swp
+
+# Database dumps (local backups)
+*.sql
+!init-db.sql
+
+# Testing
+.coverage/
+.nyc_output/
+
+# Ignore specific paths that shouldn't be tracked
+backup_state.txt
+SETUP_CONFIG.txt

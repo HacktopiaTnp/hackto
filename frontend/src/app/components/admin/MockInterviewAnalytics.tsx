@@ -30,113 +30,32 @@ export default function MockInterviewAnalytics() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'technical' | 'hr' | 'case-study' | 'behavioral'>('all');
   const [filterRecommendation, setFilterRecommendation] = useState<'all' | 'excellent' | 'good' | 'average' | 'needs-improvement'>('all');
+  const [loading, setLoading] = useState(true);
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
-    const saved = localStorage.getItem('mockInterviews');
-    if (saved) {
-      setInterviews(JSON.parse(saved));
-    } else {
-      const sampleInterviews: MockInterview[] = [
-        {
-          id: '1',
-          studentName: 'Rahul Verma',
-          studentRoll: 'CS21001',
-          interviewDate: '2026-01-28',
-          interviewType: 'technical',
-          interviewer: 'Dr. Amit Kumar',
-          duration: 45,
-          overallScore: 88,
-          technicalScore: 90,
-          communicationScore: 85,
-          problemSolvingScore: 92,
-          confidenceScore: 85,
-          feedback: 'Excellent problem-solving approach. Strong DSA knowledge. Communication clear.',
-          strengths: ['Problem Solving', 'DSA Knowledge', 'Code Quality'],
-          improvements: ['System Design', 'Time Complexity Analysis'],
-          recommendation: 'excellent',
-          recordingAvailable: true
-        },
-        {
-          id: '2',
-          studentName: 'Ananya Singh',
-          studentRoll: 'CS21002',
-          interviewDate: '2026-01-30',
-          interviewType: 'hr',
-          interviewer: 'Ms. Priya Sharma',
-          duration: 30,
-          overallScore: 95,
-          technicalScore: 0,
-          communicationScore: 98,
-          problemSolvingScore: 92,
-          confidenceScore: 95,
-          feedback: 'Outstanding communication. Very confident. Handled behavioral questions excellently.',
-          strengths: ['Communication', 'Confidence', 'Professionalism', 'Body Language'],
-          improvements: [],
-          recommendation: 'excellent',
-          recordingAvailable: true
-        },
-        {
-          id: '3',
-          studentName: 'Vikram Mehta',
-          studentRoll: 'EC21015',
-          interviewDate: '2026-01-25',
-          interviewType: 'technical',
-          interviewer: 'Prof. Rajesh Patel',
-          duration: 40,
-          overallScore: 65,
-          technicalScore: 68,
-          communicationScore: 60,
-          problemSolvingScore: 65,
-          confidenceScore: 68,
-          feedback: 'Good basics but struggled with advanced concepts. Needs more practice.',
-          strengths: ['Basic Programming', 'Enthusiasm'],
-          improvements: ['Advanced Algorithms', 'Communication', 'Code Optimization'],
-          recommendation: 'average',
-          recordingAvailable: false
-        },
-        {
-          id: '4',
-          studentName: 'Kavya Reddy',
-          studentRoll: 'IT21023',
-          interviewDate: '2026-01-20',
-          interviewType: 'behavioral',
-          interviewer: 'Dr. Sneha Gupta',
-          duration: 25,
-          overallScore: 72,
-          technicalScore: 0,
-          communicationScore: 75,
-          problemSolvingScore: 70,
-          confidenceScore: 70,
-          feedback: 'Good behavioral responses. Work on being more concise.',
-          strengths: ['Situational Awareness', 'Team Spirit'],
-          improvements: ['Conciseness', 'Confidence', 'Eye Contact'],
-          recommendation: 'good',
-          recordingAvailable: true
-        },
-        {
-          id: '5',
-          studentName: 'Arjun Kapoor',
-          studentRoll: 'CS21045',
-          interviewDate: '2026-01-27',
-          interviewType: 'case-study',
-          interviewer: 'Mr. Anil Sharma',
-          duration: 50,
-          overallScore: 80,
-          technicalScore: 82,
-          communicationScore: 78,
-          problemSolvingScore: 85,
-          confidenceScore: 75,
-          feedback: 'Strong analytical skills in case study. Good problem breakdown. Presentation needs work.',
-          strengths: ['Analytical Thinking', 'Structured Approach', 'Business Acumen'],
-          improvements: ['Presentation Skills', 'Confidence'],
-          recommendation: 'good',
-          recordingAvailable: true
-        }
-      ];
-      setInterviews(sampleInterviews);
-      localStorage.setItem('mockInterviews', JSON.stringify(sampleInterviews));
+    fetchInterviews();
+  }, [filterType, filterRecommendation]);
+
+  const fetchInterviews = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (filterType !== 'all') params.append('type', filterType);
+      if (filterRecommendation !== 'all') params.append('recommendation', filterRecommendation);
+
+      const response = await fetch(`${apiBaseUrl}/api/v1/mock-interview?${params}`);
+      const data = await response.json();
+
+      if (data.success && Array.isArray(data.data)) {
+        setInterviews(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching interviews:', error);
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  };
 
   const filteredInterviews = interviews.filter(interview => {
     const matchesSearch = 
@@ -152,11 +71,11 @@ export default function MockInterviewAnalytics() {
 
   const stats = {
     totalInterviews: interviews.length,
-    averageScore: Math.round(interviews.reduce((acc, i) => acc + i.overallScore, 0) / interviews.length),
+    averageScore: interviews.length ? Math.round(interviews.reduce((acc, i) => acc + i.overallScore, 0) / interviews.length) : 0,
     excellentCount: interviews.filter(i => i.recommendation === 'excellent').length,
     needsImprovementCount: interviews.filter(i => i.recommendation === 'needs-improvement').length,
-    avgTechnical: Math.round(interviews.filter(i => i.technicalScore > 0).reduce((acc, i) => acc + i.technicalScore, 0) / interviews.filter(i => i.technicalScore > 0).length),
-    avgCommunication: Math.round(interviews.reduce((acc, i) => acc + i.communicationScore, 0) / interviews.length)
+    avgTechnical: interviews.filter(i => i.technicalScore > 0).length ? Math.round(interviews.filter(i => i.technicalScore > 0).reduce((acc, i) => acc + i.technicalScore, 0) / interviews.filter(i => i.technicalScore > 0).length) : 0,
+    avgCommunication: interviews.length ? Math.round(interviews.reduce((acc, i) => acc + i.communicationScore, 0) / interviews.length) : 0
   };
 
   const getRecommendationColor = (rec: string) => {
@@ -186,85 +105,102 @@ export default function MockInterviewAnalytics() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+    <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 max-w-7xl mx-auto">
+      {/* Stats Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
+            <CardTitle className="text-[10px] sm:text-xs md:text-sm font-medium text-muted-foreground">Total</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalInterviews}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">{stats.totalInterviews}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Avg Score</CardTitle>
+            <CardTitle className="text-[10px] sm:text-xs md:text-sm font-medium text-muted-foreground">Avg Score</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${getScoreColor(stats.averageScore)}`}>
+            <div className={`text-lg sm:text-xl md:text-2xl font-bold ${getScoreColor(stats.averageScore)}`}>
               {stats.averageScore}%
             </div>
           </CardContent>
         </Card>
         <Card className="border-green-200 bg-green-50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-700">Excellent</CardTitle>
+            <CardTitle className="text-[10px] sm:text-xs md:text-sm font-medium text-green-700">Excellent</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.excellentCount}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold text-green-600">{stats.excellentCount}</div>
           </CardContent>
         </Card>
         <Card className="border-red-200 bg-red-50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-red-700">Needs Work</CardTitle>
+            <CardTitle className="text-[10px] sm:text-xs md:text-sm font-medium text-red-700">Needs Work</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.needsImprovementCount}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold text-red-600">{stats.needsImprovementCount}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Avg Tech</CardTitle>
+            <CardTitle className="text-[10px] sm:text-xs md:text-sm font-medium text-muted-foreground">Avg Tech</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${getScoreColor(stats.avgTechnical)}`}>
+            <div className={`text-lg sm:text-xl md:text-2xl font-bold ${getScoreColor(stats.avgTechnical)}`}>
               {stats.avgTechnical}%
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Avg Comm</CardTitle>
+            <CardTitle className="text-[10px] sm:text-xs md:text-sm font-medium text-muted-foreground">Avg Comm</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${getScoreColor(stats.avgCommunication)}`}>
+            <div className={`text-lg sm:text-xl md:text-2xl font-bold ${getScoreColor(stats.avgCommunication)}`}>
               {stats.avgCommunication}%
             </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Main Card */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Video className="h-5 w-5" />
+        <CardHeader className="p-3 sm:p-4 md:p-6">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base md:text-lg font-semibold">
+            <Video className="w-4 h-4 sm:w-5 sm:h-5" />
             Mock Interview Performance
           </CardTitle>
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mt-4">
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 md:gap-4 mt-3 sm:mt-4">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground shrink-0" />
+              <Input 
+                placeholder="Search..." 
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
+                className="pl-8 sm:pl-9 h-8 sm:h-9 md:h-10 text-xs sm:text-sm"
+              />
             </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <select aria-label="Filter by interview type" className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={filterType} onChange={(e) => setFilterType(e.target.value as any)}>
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
+              <Filter className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
+              <select 
+                aria-label="Filter by interview type" 
+                className="flex h-8 sm:h-9 md:h-10 rounded-md border border-input bg-transparent px-2 sm:px-3 py-1 text-[10px] sm:text-xs md:text-sm" 
+                value={filterType} 
+                onChange={(e) => setFilterType(e.target.value as any)}
+              >
                 <option value="all">All Types</option>
                 <option value="technical">Technical</option>
                 <option value="hr">HR</option>
                 <option value="case-study">Case Study</option>
                 <option value="behavioral">Behavioral</option>
               </select>
-              <select aria-label="Filter by recommendation" className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={filterRecommendation} onChange={(e) => setFilterRecommendation(e.target.value as any)}>
+              <select 
+                aria-label="Filter by recommendation" 
+                className="flex h-8 sm:h-9 md:h-10 rounded-md border border-input bg-transparent px-2 sm:px-3 py-1 text-[10px] sm:text-xs md:text-sm" 
+                value={filterRecommendation} 
+                onChange={(e) => setFilterRecommendation(e.target.value as any)}
+              >
                 <option value="all">All Ratings</option>
                 <option value="excellent">Excellent</option>
                 <option value="good">Good</option>
@@ -274,115 +210,119 @@ export default function MockInterviewAnalytics() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+        <CardContent className="p-3 sm:p-4 md:p-6">
+          <div className="space-y-3 sm:space-y-4">
             {filteredInterviews.map((interview) => (
               <Card key={interview.id} className="border-l-4 border-l-purple-500">
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-semibold">{interview.studentName}</h3>
-                          <Badge variant="outline">{interview.studentRoll}</Badge>
-                          <Badge className={getTypeColor(interview.interviewType)}>
+                <CardContent className="pt-3 sm:pt-4 md:pt-6 p-3 sm:p-4 md:p-6">
+                  <div className="space-y-3 sm:space-y-4">
+                    {/* Header Row */}
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-2">
+                          <h3 className="text-xs sm:text-sm md:text-base font-semibold truncate">{interview.studentName}</h3>
+                          <Badge variant="outline" className="text-[8px] sm:text-xs md:text-sm py-0 px-1.5">{interview.studentRoll}</Badge>
+                          <Badge className={`${getTypeColor(interview.interviewType)} text-[8px] sm:text-xs md:text-sm py-0 px-1.5`}>
                             {interview.interviewType.toUpperCase()}
                           </Badge>
                           {interview.recordingAvailable && (
-                            <Badge variant="outline" className="text-blue-600">
-                              <Video className="h-3 w-3 mr-1" />Recording
+                            <Badge variant="outline" className="text-blue-600 text-[8px] sm:text-xs md:text-sm py-0 px-1.5">
+                              <Video className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5" />Rec
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            {new Date(interview.interviewDate).toLocaleDateString()}
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 md:gap-4 text-[10px] sm:text-xs md:text-sm text-muted-foreground">
+                          <span className="flex items-center gap-0.5 sm:gap-1 whitespace-nowrap">
+                            <Calendar className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
+                            {new Date(interview.interviewDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </span>
-                          <span className="flex items-center gap-1">
-                            <User className="h-4 w-4" />
+                          <span className="flex items-center gap-0.5 sm:gap-1 truncate">
+                            <User className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
                             {interview.interviewer}
                           </span>
-                          <span>{interview.duration} mins</span>
+                          <span className="whitespace-nowrap">{interview.duration}m</span>
                         </div>
                       </div>
-                      <div className="text-right space-y-2">
-                        <div className={`text-3xl font-bold ${getScoreColor(interview.overallScore)}`}>
+                      <div className="text-right space-y-1.5 sm:space-y-2 shrink-0">
+                        <div className={`text-xl sm:text-2xl md:text-3xl font-bold ${getScoreColor(interview.overallScore)}`}>
                           {interview.overallScore}%
                         </div>
-                        <Badge className={getRecommendationColor(interview.recommendation)}>
-                          {interview.recommendation === 'excellent' && <Star className="h-3 w-3 mr-1" />}
+                        <Badge className={`${getRecommendationColor(interview.recommendation)} text-[8px] sm:text-xs md:text-sm py-0.5 px-2`}>
+                          {interview.recommendation === 'excellent' && <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5" />}
                           {interview.recommendation.toUpperCase().replace('-', ' ')}
                         </Badge>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {/* Scores Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
                       {interview.technicalScore > 0 && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
+                        <div className="space-y-1.5 sm:space-y-2">
+                          <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm">
                             <span>Technical</span>
-                            <span className={`font-semibold ${getScoreColor(interview.technicalScore)}`}>
+                            <span className={`font-semibold ml-1 ${getScoreColor(interview.technicalScore)}`}>
                               {interview.technicalScore}%
                             </span>
                           </div>
-                          <Progress value={interview.technicalScore} className="h-2" />
+                          <Progress value={interview.technicalScore} className="h-1.5 sm:h-2" />
                         </div>
                       )}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span>Communication</span>
-                          <span className={`font-semibold ${getScoreColor(interview.communicationScore)}`}>
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm">
+                          <span className="truncate">Comms</span>
+                          <span className={`font-semibold ml-1 ${getScoreColor(interview.communicationScore)}`}>
                             {interview.communicationScore}%
                           </span>
                         </div>
-                        <Progress value={interview.communicationScore} className="h-2" />
+                        <Progress value={interview.communicationScore} className="h-1.5 sm:h-2" />
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span>Problem Solving</span>
-                          <span className={`font-semibold ${getScoreColor(interview.problemSolvingScore)}`}>
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm">
+                          <span className="truncate">PS</span>
+                          <span className={`font-semibold ml-1 ${getScoreColor(interview.problemSolvingScore)}`}>
                             {interview.problemSolvingScore}%
                           </span>
                         </div>
-                        <Progress value={interview.problemSolvingScore} className="h-2" />
+                        <Progress value={interview.problemSolvingScore} className="h-1.5 sm:h-2" />
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm">
                           <span>Confidence</span>
-                          <span className={`font-semibold ${getScoreColor(interview.confidenceScore)}`}>
+                          <span className={`font-semibold ml-1 ${getScoreColor(interview.confidenceScore)}`}>
                             {interview.confidenceScore}%
                           </span>
                         </div>
-                        <Progress value={interview.confidenceScore} className="h-2" />
+                        <Progress value={interview.confidenceScore} className="h-1.5 sm:h-2" />
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium">Feedback:</span>
+                    {/* Feedback */}
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 shrink-0" />
+                        <span className="text-[10px] sm:text-xs md:text-sm font-medium">Feedback:</span>
                       </div>
-                      <p className="text-sm text-muted-foreground bg-blue-50 p-3 rounded border border-blue-200">
+                      <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground bg-blue-50 p-2 sm:p-3 rounded border border-blue-200 line-clamp-2 sm:line-clamp-none">
                         {interview.feedback}
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Strengths & Improvements */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
                       <div>
-                        <span className="text-sm font-medium">Strengths:</span>
-                        <div className="flex flex-wrap gap-2 mt-2">
+                        <span className="text-[10px] sm:text-xs md:text-sm font-medium block mb-1.5">Strengths:</span>
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2">
                           {interview.strengths.map((strength, idx) => (
-                            <Badge key={idx} variant="outline" className="text-green-600 border-green-600">{strength}</Badge>
+                            <Badge key={idx} variant="outline" className="text-green-600 border-green-600 text-[8px] sm:text-xs md:text-sm py-0.5 px-2">{strength}</Badge>
                           ))}
                         </div>
                       </div>
                       {interview.improvements.length > 0 && (
                         <div>
-                          <span className="text-sm font-medium">Areas for Improvement:</span>
-                          <div className="flex flex-wrap gap-2 mt-2">
+                          <span className="text-[10px] sm:text-xs md:text-sm font-medium block mb-1.5">Improvements:</span>
+                          <div className="flex flex-wrap gap-1.5 sm:gap-2">
                             {interview.improvements.map((improvement, idx) => (
-                              <Badge key={idx} variant="outline" className="text-orange-600 border-orange-600">{improvement}</Badge>
+                              <Badge key={idx} variant="outline" className="text-orange-600 border-orange-600 text-[8px] sm:text-xs md:text-sm py-0.5 px-2">{improvement}</Badge>
                             ))}
                           </div>
                         </div>
@@ -393,7 +333,7 @@ export default function MockInterviewAnalytics() {
               </Card>
             ))}
             {filteredInterviews.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">No interviews found.</div>
+              <div className="text-center py-8 sm:py-12 text-[10px] sm:text-xs md:text-sm text-muted-foreground">No interviews found.</div>
             )}
           </div>
         </CardContent>
