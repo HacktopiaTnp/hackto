@@ -29,7 +29,7 @@ jobs:
           for i in {1..30}; do
             echo "Attempt $i/30..."
             docker-compose ps
-            BACKEND_HEALTH=$(docker-compose exec -T backend curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health || echo "000")
+            BACKEND_HEALTH=$(docker-compose exec -T backend curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/health || echo "000")
             FRONTEND_HEALTH=$(docker-compose exec -T frontend curl -s -o /dev/null -w "%{http_code}" http://localhost:80/health || echo "000")
             
             if [ "$BACKEND_HEALTH" = "200" ] && [ "$FRONTEND_HEALTH" = "200" ]; then
@@ -44,7 +44,7 @@ jobs:
       - name: Test Backend API
         run: |
           echo "Testing Backend Health Endpoint..."
-          docker-compose exec -T backend curl -v http://localhost:3000/health
+          docker-compose exec -T backend curl -v http://localhost:3001/health
           
       - name: Test Frontend
         run: |

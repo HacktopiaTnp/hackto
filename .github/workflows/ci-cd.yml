@@ -63,7 +63,7 @@ jobs:
       - name: Frontend - Build
         run: cd frontend && npm run build
         env:
-          VITE_API_BASE_URL: http://localhost:3000
+          VITE_API_BASE_URL: http://localhost:3001
 
   # Docker Build & Push
   docker-build:
@@ -132,7 +132,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            VITE_API_BASE_URL=http://localhost:3000
+            VITE_API_BASE_URL=http://localhost:3001
 
   # Security Scanning
   security:
