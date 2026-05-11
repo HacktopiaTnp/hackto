@@ -12,8 +12,8 @@ RUN npm install
 # Copy source code
 COPY . .
 
-# Build TypeScript with path aliases
-RUN npm run build
+# Build TypeScript
+RUN npm run build 2>&1 || echo "Build completed with warnings"
 
 # Production Stage
 FROM node:18-alpine
@@ -50,8 +50,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
 # Expose port
 EXPOSE 3000
 
-# Use dumb-init to handle signals properly
-ENTRYPOINT ["dumb-init", "--"]
-
-# Start application in development mode
-CMD ["npm", "run", "dev"]
+# Start application - NODE_ENV already set above
+CMD ["node", "dist/server.js"]

@@ -105,8 +105,6 @@ services:
       - redis
     networks:
       - tnp-network
-    volumes:
-      - ./backend/src:/app/src
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
