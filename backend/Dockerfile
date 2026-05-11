@@ -30,8 +30,8 @@ RUN apk add --no-cache dumb-init curl
 # Copy package files
 COPY package*.json ./
 
-# Install ALL dependencies (including dev for tsc-alias, nodemon, etc)
-RUN npm install
+# Install production dependencies only
+RUN npm install --production
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
@@ -48,7 +48,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:3001/health || exit 1
 
 # Expose port
-EXPOSE 3000
+EXPOSE 3001
 
 # Start application
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "start"]
