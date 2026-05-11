@@ -20,7 +20,7 @@ RUN npm run build
 FROM nginx:alpine
 
 # Copy nginx config with optimizations
-COPY frontend/nginx.conf /etc/nginx/nginx.conf
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copy built application from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
