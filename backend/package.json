@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development nodemon --exec 'ts-node -r tsconfig-paths/register' src/server.ts",
     "build": "tsc && tsc-alias -p tsconfig.json",
-    "start": "cross-env NODE_ENV=production node dist/server.js",
+    "start": "node dist/server.js",
     "migrate": "typeorm migration:run -d dist/config/database.js",
     "migrate:revert": "typeorm migration:revert -d dist/config/database.js",
     "migrate:generate": "typeorm migration:generate src/migrations/$npm_config_name -d dist/config/database.js",
