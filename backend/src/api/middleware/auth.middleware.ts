@@ -174,7 +174,7 @@ export const tenantMiddleware = (req: Request, res: Response, next: NextFunction
     return;
   }
 
-  const tenantId = req.params.tenant_id || req.query.tenant_id;
+  const tenantId = (req.params.tenant_id || req.query.tenant_id) as string;
 
   if (tenantId && tenantId !== req.user.tenant_id) {
     logger.warn('Tenant isolation violation', {
